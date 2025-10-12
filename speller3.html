@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spelling Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+        }
+        /* Fix for scrollbar in history table on small screens */
+        .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="game-container" class="bg-white shadow-2xl rounded-xl p-6 md:p-10 w-full max-w-2xl transition-all duration-300">
+        <h1 class="text-3xl font-extrabold text-blue-700 text-center mb-6">
+            <span role="img" aria-label="Book">📚</span> Spelling Challenge
+        </h1>
+
+        <div id="difficulty-select-container" class="mb-4">
+            <label for="difficulty-select" class="block text-sm font-medium text-gray-700 mb-2">Select Difficulty:</label>
+            <select id="difficulty-select" class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+                <option value="level1">Level 1: Sight Words</option>
+                <option value="level2">Level 2: Common Words (4-8 Letters)</option>
+                <option value="level3">Level 3: Advanced Vocabulary (9+ Letters)</option>
+            </select>
+        </div>
+
+        <div id="word-count-select-container" class="mb-6">
+            <label for="word-count-select" class="block text-sm font-medium text-gray-700 mb-2">Select Session Length:</label>
+            <select id="word-count-select" class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+                </select>
+        </div>
+
+        <div id="timer-display" class="text-center mb-4 text-2xl font-mono font-bold text-gray-800 hidden">
+            Time: <span id="current-time">00:00</span>
+        </div>
+
+        <div id="status-message" class="text-center mb-6 h-8 text-lg font-semibold text-gray-700">
+            Loading words...
+        </div>
+
+        <div id="word-area" class="text-center mb-6 hidden">
+            <button id="speak-button"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-green-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a.5.5 0 00-.817.132l-3.921 7.842a.5.5 0 00.917.456l3.821-7.642a.5.5 0 00.001-.788zm-.922-2.788a.5.5 0 00-.77.632L12.921 9.42a.5.5 0 00.77-.632l-1.07-1.166zM7.5 10a.5.5 0 00-.5.5v3a.5.5 0 001 0v-3a.5.5 0 00-.5-.5z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21a9 9 0 100-18 9 9 0 000 18z"/>
+                    <path d="M12 14l9-5-9-5-9 5 9 5z" fill="currentColor"/>
+                    <path d="M12 14l9-5-9-5-9 5 9 5z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Speak Word
+            </button>
+            <p id="word-hint" class="mt-4 text-sm text-gray-500 italic"></p>
+        </div>
+
+        <div id="input-area" class="flex flex-col space-y-4 hidden">
+            <input type="text" id="user-input" placeholder="Type the word here..."
+                    class="p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+
+            <div class="flex space-x-4">
+                <div class="relative w-3/4">
+                    <button id="submit-button"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-300 transform hover:scale-[1.01]">
+                        Check Spelling
+                    </button>
+                    <button id="next-button"
+                            class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-gray-300 transform hover:scale-[1.01] absolute inset-0 hidden">
+                        Next Word
+                    </button>
+                </div>
+
+                <button id="exit-button"
+                        class="w-1/4 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-300 transform hover:scale-[1.01]">
+                    Exit
+                </button>
+            </div>
+        </div>
+
+        <button id="start-button"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition duration-150 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300 transform hover:scale-[1.01]"
+                disabled>
+            Start Game (Loading words...)
+        </button>
+
+        <div class="flex justify-end w-full">
+            <button id="reset-history-button"
+                    class="mt-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1 px-4 text-sm rounded-lg transition duration-150 ease-in-out shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400 transform hover:scale-[1.005] max-w-xs">
+                Reset All Scores
+            </button>
+        </div>
+
+        <div id="progress-container" class="mt-6 mb-4 hidden">
+            <p class="text-sm font-medium text-gray-700 mb-1">Session Progress</p>
+            <div class="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-xs text-right text-gray-500 mt-1">0/0 Words Mastered</p>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-gray-200 flex justify-between text-center">
+            <div>
+                <p class="text-xl font-bold text-green-600" id="correct-count">0</p>
+                <p class="text-sm text-gray-500">Correct Attempts</p>
+            </div>
+            <div>
+                <p class="text-xl font-bold text-red-600" id="incorrect-count">0</p>
+                <p class="text-sm text-gray-500">Incorrect Attempts</p>
+            </div>
+            <div>
+                <p class="text-xl font-bold text-gray-700" id="total-count">0</p>
+                <p class="text-sm text-gray-500">Total Attempts</p>
+            </div>
+        </div>
+
+        <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full text-center">
+                <p id="message-text" class="text-lg font-semibold text-gray-800 mb-4">Error</p>
+                <div id="message-actions" class="flex justify-center space-x-3">
+                    </div>
+            </div>
+        </div>
+
+        <div class="mt-10 pt-6 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4 text-center">Local Session History</h2>
+            <div class="overflow-x-auto shadow-md rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correct</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Covered</th>
+                        </tr>
+                    </thead>
+                    <tbody id="session-history-body" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="6" class="px-3 py-3 text-center text-sm text-gray-500">Loading history...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- API and External Data Configuration ---
+        // NOTE: You must provide your own Gemini API key here for Level 2/3 definitions
+        const API_KEY = ""; // <-- INSERT YOUR GEMINI API KEY HERE
+        const API_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+        const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
+        const WORD_LIST_URL = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt';
+
+        // Max words to load from external source to support the 200-word session option
+        const WORD_COUNT_MAX_LEVEL_2_3 = 200;
+        const MAX_API_RETRIES = 5;
+
+        // LocalStorage Key
+        const LOCAL_STORAGE_KEY = 'spellingChallengeHistory';
+
+        // Words that end in 's' but are NOT regular plurals (singular base forms, verbs, etc.)
+        const SINGULAR_S_EXCEPTIONS = new Set([
+            // Common sight words / base forms
+            "is", "was", "his", "as", "this", "us", "gas",
+            // Inherently singular nouns from previous discussion
+            "status", "census", "series", "analysis", "crisis",
+            "radius", "virus", "plus", "bus", "chaos", "bias",
+            "focus", "process", "congress", "access", "versus",
+            "mess", "guess", "pass"
+        ]);
+
+        // --- Audio Configuration (Tone.js) ---
+        const synth = new Tone.Synth().toDestination();
+        let audioContextStarted = false;
+
+        function scheduleDing() {
+            const now = Tone.now();
+            synth.triggerAttackRelease("C5", "16n", now);
+            synth.triggerAttackRelease("E5", "16n", now + 0.1);
+        }
+
+        function playCorrectSound() {
+             if (!audioContextStarted) {
+                Tone.start().then(() => {
+                    audioContextStarted = true;
+                    scheduleDing();
+                }).catch(err => console.error("Tone.js failed to start audio context:", err));
+             } else {
+                 scheduleDing();
+             }
+        }
+
+        function scheduleBuzzer() {
+            const now = Tone.now();
+            synth.triggerAttackRelease("E4", "16n", now);
+            synth.triggerAttackRelease("C4", "8n", now + 0.05);
+         }
+
+        function playIncorrectSound() {
+             if (!audioContextStarted) {
+                Tone.start().then(() => {
+                    audioContextStarted = true;
+                    scheduleBuzzer();
+                }).catch(err => console.error("Tone.js failed to start audio context:", err));
+             } else {
+                 scheduleBuzzer();
+             }
+        }
+
+        // --- Word Data for Difficulty Levels (Regular plurals removed) ---
+        // Level 1 words (hardcoded)
+        const LEVEL_1_WORDS = [
+            { word: "the", hint: "A common article used before a noun." },
+            { word: "of", hint: "Shows relationship or possession." },
+            { word: "and", hint: "Connects two or more things." },
+            { word: "a", hint: "Used before a singular noun starting with a consonant sound." },
+            { word: "to", hint: "Indicates movement toward a place or person." },
+            { word: "in", hint: "Indicates being contained within something." },
+            { word: "is", hint: "The present tense of the verb 'to be' (singular)." },
+            { word: "you", hint: "Refers to the person being addressed." },
+            { word: "that", hint: "Points to a specific thing or idea." },
+            { word: "it", hint: "Refers to a thing or animal previously mentioned." },
+            { word: "he", hint: "A masculine pronoun." },
+            { word: "was", hint: "The past tense of the verb 'to be' (singular)." },
+            { word: "for", hint: "Indicating the purpose of something." },
+            { word: "on", hint: "Indicating position above or in contact with." },
+            { word: "are", hint: "The present tense of the verb 'to be' (plural)." },
+            { word: "as", hint: "Used to make comparisons." },
+            { word: "with", hint: "Accompanied by another person or thing." },
+            { word: "his", hint: "Belonging to a male." },
+            { word: "they", hint: "Refers to a group of people or things." },
+            { word: "I", hint: "Refers to oneself." },
+            { word: "at", hint: "Indicates a specific location or time." },
+            { word: "be", hint: "The base form of the verb 'to be'." },
+            { word: "this", hint: "Points to something nearby." },
+            { word: "have", hint: "To own or hold." },
+            { word: "from", hint: "Indicating the starting point of a movement." },
+            { word: "or", hint: "Used to present an alternative." },
+            { word: "one", hint: "The number before two." },
+            { word: "had", hint: "The past tense of 'have'." },
+            { word: "by", hint: "Indicating proximity or the agent of an action." },
+            { word: "but", hint: "Introduces a contrasting idea." },
+            { word: "not", hint: "Used to make a statement negative." },
+            { word: "what", hint: "Asking for information about something." },
+            { word: "all", hint: "The whole quantity or extent." },
+            { word: "were", hint: "The past tense of the verb 'to be' (plural)." },
+            { word: "we", hint: "Refers to oneself and others." },
+            { word: "when", hint: "Asking about the time of an event." },
+            { word: "your", hint: "Belonging to the person being addressed." },
+            { word: "can", hint: "Expresses ability or possibility." },
+            { word: "said", hint: "The past tense of 'say'." },
+            { word: "there", hint: "Referring to a place." },
+            { word: "use", hint: "To employ something for a purpose." },
+            { word: "go", hint: "To move from one place to another." },
+            { word: "look", hint: "To direct one's gaze toward something." },
+            { word: "make", hint: "To create or form something." },
+            { word: "like", hint: "To find something pleasant or attractive." },
+            { word: "out", hint: "Moving away from the interior." },
+            { word: "find", hint: "To discover something." },
+            { word: "will", hint: "Expresses the future tense." },
+            { word: "just", hint: "Exactly, or only recently." },
+            { word: "give", hint: "To hand over something." },
+            { word: "new", hint: "Not existing before." },
+            { word: "because", hint: "Giving a reason for something." },
+            { word: "around", hint: "Located or situated on every side." },
+            { word: "know", hint: "To be aware of a fact or situation." },
+            { word: "don't", hint: "Short for 'do not'." },
+            { word: "would", hint: "Expresses a condition or desire." },
+            { word: "write", hint: "To form letters or words on a surface." },
+            { word: "long", hint: "Having a great distance from end to end." },
+            { word: "down", hint: "Toward a lower place." },
+            { word: "see", hint: "To perceive with the eyes." },
+            { word: "me", hint: "Referring to oneself as the object of a verb." },
+            { word: "time", hint: "The indefinite continued progress of existence." },
+            { word: "no", hint: "The opposite of yes." },
+            { word: "word", hint: "A single unit of language with meaning." }
+        ];
+
+        const LEVEL_1_FULL_COUNT = LEVEL_1_WORDS.length; // 52 words
+
+        const ALL_LEVELS = {
+            level1: LEVEL_1_WORDS,
+            level2: [], // Populated on load
+            level3: []  // Populated on load
+        };
+
+        // --- DOM Elements ---
+        const startButton = document.getElementById('start-button');
+        const speakButton = document.getElementById('speak-button');
+        const submitButton = document.getElementById('submit-button');
+        const nextButton = document.getElementById('next-button');
+        const exitButton = document.getElementById('exit-button');
+        const userInput = document.getElementById('user-input');
+        const statusMessage = document.getElementById('status-message');
+        const wordHint = document.getElementById('word-hint');
+        const wordArea = document.getElementById('word-area');
+        const inputArea = document.getElementById('input-area');
+        const correctCountEl = document.getElementById('correct-count');
+        const incorrectCountEl = document.getElementById('incorrect-count');
+        const totalCountEl = document.getElementById('total-count');
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const messageActions = document.getElementById('message-actions');
+        const difficultySelectContainer = document.getElementById('difficulty-select-container');
+        const difficultySelect = document.getElementById('difficulty-select');
+        const wordCountSelect = document.getElementById('word-count-select'); // New element
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const timerDisplay = document.getElementById('timer-display');
+        const currentTimeEl = document.getElementById('current-time');
+        const sessionHistoryBody = document.getElementById('session-history-body');
+        const resetHistoryButton = document.getElementById('reset-history-button');
+
+        // --- Game State & Timer Variables ---
+        let currentWord = null;
+        let correctSpells = 0;
+        let incorrectSpells = 0;
+        let spokenWords = []; // Array of word objects presented this session
+        let incorrectWordsQueue = []; // Queue for later review of words missed on first attempt
+        let retentionQueue = []; // Queue for immediate re-try of the word just missed
+        let currentWordList = []; // The final, randomized list for the session
+        window.isWordsLoaded = false;
+        let isSpeakingOrFetching = false;
+
+        // Timer State
+        let startTime = null;
+        let timerInterval = null;
+        let finalCompletionTimeMs = 0;
+
+        // --- Utility Functions ---
+        /**
+         * Converts milliseconds to a formatted MM:SS string.
+         * @param {number} ms - time in milliseconds.
+         * @returns {string} - Formatted time string.
+         */
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const pad = (num) => String(num).padStart(2, '0');
+            return `${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        /**
+         * Utility to close the modal box.
+         */
+        function closeMessageModal() {
+            messageBox.classList.add('hidden');
+            messageBox.classList.remove('flex');
+        }
+
+        /**
+         * Displays a simple alert message.
+         * @param {string} message - The message to display.
+         */
+        function showMessage(message) {
+            messageActions.innerHTML = '';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.textContent = 'Dismiss';
+            dismissBtn.className = 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition';
+            dismissBtn.onclick = closeMessageModal;
+            messageActions.appendChild(dismissBtn);
+
+            document.getElementById('message-text').textContent = message;
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('flex');
+        }
+
+        /**
+         * Displays a confirmation dialog (safe replacement for confirm()).
+         * @param {string} message - The confirmation question.
+         * @param {function} onConfirm - Callback to execute on confirmation.
+         */
+        function showConfirm(message, onConfirm) {
+            messageActions.innerHTML = '';
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.textContent = 'Yes, Proceed';
+            confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition';
+            confirmBtn.onclick = () => {
+                closeMessageModal();
+                onConfirm();
+            };
+            messageActions.appendChild(confirmBtn);
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'bg-gray-400 hover:bg-gray-500 text-gray-800 font-bold py-2 px-4 rounded transition';
+            cancelBtn.onclick = closeMessageModal;
+            messageActions.appendChild(cancelBtn);
+
+            document.getElementById('message-text').textContent = message;
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('flex');
+        }
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function fetchWithRetry(url, options, maxRetries = MAX_API_RETRIES) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.status === 429 && i < maxRetries - 1) {
+                        const delay = Math.pow(2, i) * 1000 + Math.floor(Math.random() * 1000);
+                        await sleep(delay);
+                        continue;
+                    }
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    if (i === maxRetries - 1) {
+                        throw error;
+                    }
+                }
+            }
+        }
+
+        async function fetchDefinition(word) {
+            if (!API_KEY) {
+                return "Definition lookup skipped: No API key provided.";
+            }
+
+            const apiUrl = `${API_URL_BASE}${MODEL_NAME}:generateContent?key=${API_KEY}`;
+            const systemPrompt = "You are a concise, single-purpose dictionary. For the user's word query, provide only a single, simple, and direct definition suitable for a spelling game hint. Do not include the word itself, its part of speech, examples, or any commentary.";
+            const userQuery = `Provide the definition for the English word: ${word}.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const result = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) {
+                    throw new Error("Received empty content from API.");
+                }
+
+                // Clean up any stray citations (e.g., [1:2])
+                return text.replace(/\[\d+:\d+\]/g, '').trim();
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                return "Definition lookup failed. Try using Google Search to find the definition.";
+            }
+        }
+        /**
+         * Selects a random subset of words from the array.
+         * @param {Array<Object>} arr - The full array of word objects.
+         * @param {number} count - The number of words to select.
+         * @returns {Array<Object>} - A new array containing the selected words.
+         */
+        function selectRandomWords(arr, count) {
+            // Ensure we don't try to select more words than available
+            const actualCount = Math.min(count, arr.length);
+
+            const shuffled = arr.slice();
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled.slice(0, actualCount);
+        }
+
+        /**
+         * Updates the Word Count selector options based on the selected difficulty.
+         */
+        function updateWordCountSelector() {
+            const selectedLevel = difficultySelect.value;
+            wordCountSelect.innerHTML = '';
+
+            let optionsHtml = '';
+
+            if (selectedLevel === 'level1') {
+                // Level 1: 30 words or full set
+                optionsHtml += `<option value="30">30 Words</option>`;
+                optionsHtml += `<option value="full">Full Set (${LEVEL_1_FULL_COUNT} Words)</option>`;
+            } else {
+                // Level 2/3: 50, 100, 150, 200 words
+                const maxAvailable = ALL_LEVELS[selectedLevel].length;
+                [50, 100, 150, 200].forEach(count => {
+                    if (count <= maxAvailable) {
+                        optionsHtml += `<option value="${count}">${count} Words</option>`;
+                    }
+                });
+
+                // Fallback for smaller sets if maxAvailable is less than 50
+                if (maxAvailable < 50 && maxAvailable > 0) {
+                     optionsHtml += `<option value="${maxAvailable}">Full Set (${maxAvailable} Words)</option>`;
+                } else if (maxAvailable >= 50 && maxAvailable < 200) {
+                     // Ensure the full set is an option if less than 200 but >50
+                     optionsHtml += `<option value="${maxAvailable}">Full Set (${maxAvailable} Words)</option>`;
+                }
+            }
+
+            wordCountSelect.innerHTML = optionsHtml;
+        }
+
+        async function loadExternalWords() {
+            startButton.disabled = true;
+            statusMessage.innerHTML = '<span class="text-indigo-600">Loading words from external source... Please wait.</span>';
+            startButton.textContent = 'Start Game (Loading words)';
+
+            try {
+                const response = await fetch(WORD_LIST_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const text = await response.text();
+                const words = text.split('\n')
+                    .map(word => word.trim().toLowerCase())
+                    .filter(word =>
+                         word.length > 0 &&
+                         /^[a-z]+$/.test(word) &&
+                         (
+                            !word.endsWith('s') ||
+                             SINGULAR_S_EXCEPTIONS.has(word)
+                        )
+                    );
+
+                const level2WordsRaw = words.filter(word => word.length >= 4 && word.length <= 8);
+                const selectedLevel2 = selectRandomWords(level2WordsRaw.map(word => ({ word: word })), WORD_COUNT_MAX_LEVEL_2_3);
+                ALL_LEVELS.level2 = selectedLevel2;
+
+                const level3WordsRaw = words.filter(word => word.length >= 9);
+                const selectedLevel3 = selectRandomWords(level3WordsRaw.map(word => ({ word: word })), WORD_COUNT_MAX_LEVEL_2_3);
+                ALL_LEVELS.level3 = selectedLevel3;
+
+                window.isWordsLoaded = true;
+
+                statusMessage.innerHTML = 'Words loaded! Press "Start Game" to begin!';
+                startButton.textContent = 'Start Game';
+                startButton.disabled = false;
+
+                // IMPORTANT: Update selector after words are loaded to show available counts
+                updateWordCountSelector();
+
+            } catch (error) {
+                console.error('Failed to load external word list:', error);
+                showMessage(`Failed to load external word list. Error: ${error.message}`);
+                statusMessage.innerHTML = '<span class="text-red-600">Error loading words.</span>';
+                startButton.textContent = 'Load Error';
+                updateWordCountSelector();
+            }
+        }
+
+        // --- Timer Functions ---
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            startTime = Date.now();
+            timerDisplay.classList.remove('hidden');
+
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        /**
+         * Stops the timer interval and returns the elapsed time, but does NOT reset finalCompletionTimeMs.
+         * @returns {number} The elapsed time in milliseconds.
+         */
+        function stopTimer() {
+            let elapsed = 0;
+            if (startTime) {
+                elapsed = Date.now() - startTime;
+            }
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            return elapsed;
+        }
+
+        function updateTimerDisplay() {
+            if (startTime) {
+                const elapsed = Date.now() - startTime;
+                currentTimeEl.textContent = formatTime(elapsed);
+            }
+        }
+
+        // --- LocalStorage Functions ---
+
+        /**
+         * Saves the session results to localStorage.
+         * @param {string} status - 'completed' or 'exited'.
+         */
+        function saveSessionResult(status) {
+            // spokenWords.length is the number of unique words PRESENTED
+            const sessionData = {
+                timestamp: Date.now(),
+                difficulty: difficultySelect.value,
+                correct: correctSpells,
+                incorrect: incorrectSpells,
+                wordsCovered: spokenWords.length,
+                total: currentWordList.length,
+                timeMs: finalCompletionTimeMs,
+                timeFormatted: formatTime(finalCompletionTimeMs),
+                status: status
+            };
+
+            try {
+                const history = loadHistoryFromStorage();
+                history.unshift(sessionData); // Add to the start
+
+                // Keep only the latest 10 sessions to prevent storage bloat
+                const limitedHistory = history.slice(0, 10);
+
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(limitedHistory));
+                console.log("Session saved successfully to localStorage with status:", status);
+            } catch (error) {
+                console.error("Error saving to localStorage:", error);
+            }
+        }
+
+        /**
+         * Loads the session history from localStorage.
+         * @returns {Array<Object>} - The history array, or an empty array if none found.
+         */
+        function loadHistoryFromStorage() {
+            try {
+                const historyString = localStorage.getItem(LOCAL_STORAGE_KEY);
+                return historyString ? JSON.parse(historyString) : [];
+            } catch (error) {
+                console.error("Error loading history from localStorage:", error);
+                return [];
+            }
+        }
+
+        /**
+         * Renders the session history table from localStorage data.
+         */
+        function renderHistoryTable() {
+            const history = loadHistoryFromStorage();
+            sessionHistoryBody.innerHTML = ''; // Clear existing rows
+
+            if (history.length === 0) {
+                sessionHistoryBody.innerHTML = '<tr><td colspan="6" class="px-3 py-3 text-center text-sm text-gray-500">No session history recorded yet.</td></tr>';
+                return;
+            }
+
+            history.forEach(session => {
+                const date = new Date(session.timestamp).toLocaleDateString();
+                const levelMap = {
+                    'level1': 'L1: Sight',
+                    'level2': 'L2: Common',
+                    'level3': 'L3: Advanced'
+                };
+                const statusClass = session.status === 'completed' ? 'text-green-600' : 'text-yellow-600';
+                const statusText = session.status.charAt(0).toUpperCase() + session.status.slice(1);
+
+                const row = sessionHistoryBody.insertRow();
+                row.className = 'hover:bg-gray-50';
+
+                row.insertCell().textContent = date;
+                row.insertCell().textContent = levelMap[session.difficulty];
+                row.insertCell().innerHTML = `<span class="${statusClass} font-semibold">${statusText}</span>`;
+                row.insertCell().textContent = session.timeFormatted;
+                row.insertCell().textContent = session.correct;
+                row.insertCell().textContent = `${session.wordsCovered}/${session.total}`;
+
+                // Add Tailwind classes to cells
+                Array.from(row.cells).forEach(cell => {
+                    cell.classList.add('px-3', 'py-3', 'whitespace-nowrap', 'text-sm', 'text-gray-700');
+                });
+            });
+        }
+
+        /**
+         * Clears all session history from localStorage.
+         */
+        function resetAllHistory() {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            renderHistoryTable();
+            showMessage("All spelling history has been permanently deleted! 🗑️");
+        }
+
+
+        // --- Core Game Functions ---
+
+        /**
+         * Initializes and starts a new game session.
+         */
+        function startGame() {
+            if (!window.isWordsLoaded) {
+                showMessage("Words are still loading or failed to load. Please try again.");
+                return;
+            }
+
+            // 1. Reset State
+            resetGame();
+
+            // 2. Select Word List
+            const selectedLevel = difficultySelect.value;
+            const allWordsForLevel = ALL_LEVELS[selectedLevel];
+            const wordCountSetting = wordCountSelect.value;
+
+            let targetCount;
+            if (wordCountSetting === 'full') {
+                targetCount = allWordsForLevel.length;
+            } else {
+                targetCount = parseInt(wordCountSetting, 10);
+            }
+
+            // Select random words for the session
+            currentWordList = selectRandomWords(allWordsForLevel, targetCount);
+
+            // Initial check for word list integrity
+            if (currentWordList.length === 0) {
+                 showMessage("Error: The selected difficulty has no words available.");
+                 resetGame();
+                 return;
+            }
+
+            // 3. Update UI to Game Mode
+            difficultySelectContainer.classList.add('hidden');
+            wordCountSelect.parentElement.classList.add('hidden'); // Hide session length container
+            startButton.classList.add('hidden');
+            resetHistoryButton.classList.add('hidden'); // Hide reset history button
+
+            wordArea.classList.remove('hidden');
+            inputArea.classList.remove('hidden');
+            progressContainer.classList.remove('hidden');
+
+            // 4. Start Timer and Game Loop
+            startTimer();
+            updateScoreboard();
+            updateProgress();
+
+            // Start the first word
+            nextWord();
+        }
+
+        /**
+         * Sets up the next word challenge.
+         */
+        function nextWord() {
+            userInput.value = '';
+            userInput.focus();
+            wordHint.textContent = '...Click "Speak Word" to hear the challenge and get a hint.';
+
+            // Show/Hide buttons for the start of a round
+            submitButton.classList.remove('hidden');
+            nextButton.classList.add('hidden');
+            userInput.disabled = false;
+            speakButton.disabled = false;
+
+            // Check if the session is complete
+            if (spokenWords.length >= currentWordList.length && incorrectWordsQueue.length === 0 && retentionQueue.length === 0) {
+                // Game Over - Session Completed
+                endGame('completed');
+                return;
+            }
+
+            // 1. Priority: Words that were just incorrect (retention queue)
+            if (retentionQueue.length > 0) {
+                currentWord = retentionQueue.shift();
+                statusMessage.innerHTML = '<span class="text-orange-600 font-semibold">Re-try: Give this word another shot!</span>';
+            }
+            // 2. Second Priority: Words that were incorrect on first attempt (incorrect queue)
+            else if (incorrectWordsQueue.length > 0) {
+                currentWord = incorrectWordsQueue.shift();
+                statusMessage.innerHTML = '<span class="text-red-600 font-semibold">Review: Previously missed word!</span>';
+            }
+            // 3. Last Priority: A new word from the main list
+            else if (spokenWords.length < currentWordList.length) {
+                currentWord = currentWordList[spokenWords.length]; // The next word in the original sequence
+                statusMessage.innerHTML = '<span class="text-blue-700 font-semibold">New Word!</span>';
+            } else {
+                // If all queues are empty but the session isn't over (should be caught by the first check)
+                endGame('completed');
+                return;
+            }
+
+            // Add the word's base form to the list of words spoken this session (only if it's not already in the list)
+            // Note: spokenWords.length is only incremented if a *new* word is selected from currentWordList, 
+            // so this check ensures we don't count review words as new words presented.
+            if (currentWordList.indexOf(currentWord) === spokenWords.length) {
+                 spokenWords.push(currentWord);
+            }
+
+            // Check if the hint is pre-loaded (e.g., Level 1 words)
+            if (currentWord.hint) {
+                wordHint.textContent = `Hint: ${currentWord.hint}`;
+            } else {
+                // For words from external list, the user must click "Speak Word" to fetch/speak the word and get the hint.
+            }
+            
+            // Set next button text back to default
+            nextButton.textContent = 'Next Word';
+        }
+
+        /**
+         * Checks the user's spelling against the current word.
+         */
+        function checkSpelling() {
+            if (!currentWord || userInput.disabled) return; // Prevent double submission
+
+            const userAttempt = userInput.value.trim().toLowerCase();
+            const correctWord = currentWord.word.toLowerCase();
+            const isCorrect = userAttempt === correctWord;
+
+            userInput.disabled = true; // Lock the input after submitting
+            submitButton.classList.add('hidden');
+            nextButton.classList.remove('hidden');
+            speakButton.disabled = true; // Disable speaking after a guess
+
+            // --- Update Score and Status ---
+            if (isCorrect) {
+                playCorrectSound();
+                correctSpells++;
+                statusMessage.innerHTML = `<span class="text-green-600 font-extrabold">CORRECT!</span> The word was: <span class="font-mono text-xl">${currentWord.word}</span>`;
+
+                // If the word was successfully spelled, remove it from the general review queue
+                const incorrectIndex = incorrectWordsQueue.indexOf(currentWord);
+                if (incorrectIndex > -1) {
+                    incorrectWordsQueue.splice(incorrectIndex, 1);
+                }
+            } else {
+                playIncorrectSound();
+                incorrectSpells++;
+                statusMessage.innerHTML = `<span class="text-red-600 font-extrabold">INCORRECT.</span> The correct word was: <span class="font-mono text-xl">${currentWord.word}</span>`;
+
+                // Re-add to the retention queue for immediate re-try
+                retentionQueue.push(currentWord);
+
+                // If this is the first time the word was seen (i.e., not already in incorrectWordsQueue), add it
+                const isNewMistake = incorrectWordsQueue.indexOf(currentWord) === -1;
+                if (isNewMistake) {
+                    incorrectWordsQueue.push(currentWord);
+                }
+            }
+
+            updateScoreboard();
+            updateProgress();
+
+            // Update Next button text if all unique words have been presented
+            if (spokenWords.length === currentWordList.length && retentionQueue.length === 0 && incorrectWordsQueue.length === 0) {
+                 nextButton.textContent = 'View Results';
+            } else if (spokenWords.length === currentWordList.length && retentionQueue.length === 0 && incorrectWordsQueue.length > 0) {
+                 nextButton.textContent = 'Review Words';
+            }
+        }
+
+        /**
+         * Resets all game-related state variables and the UI to the pre-game state.
+         */
+        function resetGame() {
+            stopTimer(); // Ensure timer is off
+            startTime = null;
+            finalCompletionTimeMs = 0;
+            currentWord = null;
+            correctSpells = 0;
+            incorrectSpells = 0;
+            spokenWords = [];
+            incorrectWordsQueue = [];
+            retentionQueue = [];
+            currentWordList = [];
+            isSpeakingOrFetching = false;
+
+            // Reset UI
+            userInput.value = '';
+            wordHint.textContent = '';
+            statusMessage.innerHTML = 'Words loaded! Press "Start Game" to begin!';
+            currentTimeEl.textContent = '00:00';
+
+            updateScoreboard();
+            updateProgress(); // Resets progress display
+
+            // Show selectors and start button, hide game elements
+            difficultySelectContainer.classList.remove('hidden');
+            wordCountSelect.parentElement.classList.remove('hidden');
+            startButton.classList.remove('hidden');
+            resetHistoryButton.classList.remove('hidden');
+            wordArea.classList.add('hidden');
+            inputArea.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+            timerDisplay.classList.add('hidden');
+            startButton.disabled = !window.isWordsLoaded;
+            startButton.textContent = window.isWordsLoaded ? 'Start Game' : 'Start Game (Loading words...)';
+        }
+
+        /**
+         * Handles the end of the game session.
+         * @param {string} status - 'completed' or 'exited'.
+         */
+        function endGame(status) {
+            finalCompletionTimeMs = stopTimer();
+
+            // Save the session result before resetting the game state
+            saveSessionResult(status);
+
+            // Show the result message
+            const sessionLength = currentWordList.length;
+            const finalScoreText = `Your Final Score: ${correctSpells} correct out of ${sessionLength} unique words. Time: ${formatTime(finalCompletionTimeMs)}.`;
+            const actionText = status === 'completed'
+                ? `Session completed! Congratulations! ${finalScoreText} See your history below.`
+                : `Session aborted. ${finalScoreText} Your progress has been saved to history.`;
+
+            // Render history to include the new session
+            renderHistoryTable();
+            showMessage(actionText);
+
+            // Reset UI to start screen
+            resetGame();
+        }
+
+        // --- UI Update Functions ---
+
+        /**
+         * Updates the score display in the footer.
+         */
+        function updateScoreboard() {
+            totalCountEl.textContent = correctSpells + incorrectSpells;
+            correctCountEl.textContent = correctSpells;
+            incorrectCountEl.textContent = incorrectSpells;
+        }
+
+        /**
+         * Updates the progress bar and text.
+         */
+        function updateProgress() {
+            const totalWords = currentWordList.length;
+            
+            // Words 'mastered' are those that were presented and are NOT currently in the review queues.
+            // A word is mastered once it is spelled correctly and not immediately placed back in the retention queue.
+            const masteredWords = currentWordList.filter(wordObj => 
+                incorrectWordsQueue.indexOf(wordObj) === -1 && spokenWords.indexOf(wordObj) > -1
+            ).length;
+
+            const percentage = totalWords > 0 ? (masteredWords / totalWords) * 100 : 0;
+
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `${masteredWords}/${totalWords} Words Mastered`;
+        }
+
+        // --- Event Listeners ---
+
+        startButton.addEventListener('click', startGame);
+        nextButton.addEventListener('click', nextWord);
+        submitButton.addEventListener('click', checkSpelling);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !submitButton.classList.contains('hidden') && !userInput.disabled) {
+                checkSpelling();
+            } else if (e.key === 'Enter' && !nextButton.classList.contains('hidden')) {
+                nextWord();
+            }
+        });
+
+        exitButton.addEventListener('click', () => {
+             showConfirm("Are you sure you want to end the current spelling session? Your progress will be recorded.", () => {
+                 endGame('exited');
+             });
+        });
+
+        difficultySelect.addEventListener('change', updateWordCountSelector);
+
+        resetHistoryButton.addEventListener('click', () => {
+            showConfirm("This will permanently delete ALL of your saved spelling session history. Are you sure?", resetAllHistory);
+        });
+
+        speakButton.addEventListener('click', async () => {
+            if (!currentWord || isSpeakingOrFetching) return;
+
+            const word = currentWord.word;
+            speakButton.disabled = true;
+            isSpeakingOrFetching = true;
+
+            // Only update the hint text if a network call is necessary or if the hint is missing
+            if (!currentWord.hint || difficultySelect.value !== 'level1') {
+                wordHint.textContent = 'Fetching hint and speaking...';
+            }
+
+            // 1. Get Hint (if not already present)
+            let hint = currentWord.hint;
+            if (!hint) {
+                 hint = await fetchDefinition(word);
+                 // Cache the hint on the word object for future plays in this session
+                 currentWord.hint = hint;
+            }
+            wordHint.textContent = `Hint: ${hint}`;
+
+            // 2. Text-to-Speech (TTS)
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                // Set voice/rate for better clarity if needed
+                utterance.rate = 0.8;
+                utterance.onend = () => {
+                    speakButton.disabled = false;
+                    isSpeakingOrFetching = false;
+                    userInput.focus();
+                };
+                utterance.onerror = (e) => {
+                    console.error('Speech synthesis error:', e);
+                    // Fallback in case of error (e.g., no voice available)
+                    speakButton.disabled = false;
+                    isSpeakingOrFetching = false;
+                    userInput.focus();
+                };
+                window.speechSynthesis.speak(utterance);
+            } else {
+                 showMessage("Text-to-speech is not supported in your browser. You'll need to read the hint.");
+                 speakButton.disabled =
