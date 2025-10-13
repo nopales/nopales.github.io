@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spelling Challenge</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7fafc; margin: 0; }
+    .container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #0002; padding: 2em; }
+    h1 { text-align: center; color: #2563eb; }
+    .select-row { display: flex; gap: 1em; margin-bottom: 1em; }
+    select, input[type=text] { width: 100%; padding: 0.5em; font-size: 1em; border-radius: 6px; border: 1px solid #ccc; }
+    button { padding: 0.7em 1.5em; font-size: 1em; border-radius: 6px; border: none; background: #2563eb; color: #fff; cursor: pointer; margin-top: 1em; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .status { margin: 1em 0; text-align: center; font-weight: bold; }
+    .progress { text-align: center; margin: 1em 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Spelling Challenge</h1>
+    <div class="select-row">
+      <label>Difficulty:
+        <select id="difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+      <label>Session Length:
+        <select id="sessionLength">
+          <option value="10">10 words</option>
+          <option value="20">20 words</option>
+          <option value="50">50 words</option>
+          <option value="100">100 words</option>
+        </select>
+      </label>
+      <button id="startBtn">Start Game</button>
+    </div>
+    <div id="gameArea" style="display:none;">
+      <div class="progress" id="progress"></div>
+      <div style="text-align:center;">
+        <div id="timer" style="font-size:1.2em; margin-bottom:0.5em; color:#2563eb;">Time: 00:00</div>
+        <button id="speakBtn">🔊 Speak Word</button>
+      </div>
+      <div class="definition" id="definition" style="margin:1em 0; text-align:center; color:#2563eb; font-weight:500;"></div>
+      <div style="margin:1em 0;">
+        <input type="text" id="spellingInput" placeholder="Type the word..." autocomplete="off" />
+        <button id="submitBtn">Check Spelling</button>
+      </div>
+      <div class="status" id="status"></div>
+      <div style="text-align:center; margin-top:2em;">
+        <button id="exitBtn" style="background-color: #dc2626;">↩ Exit Game</button>
+      </div>
+    </div>
+    <div id="statsArea" style="margin-top:2em; border-top:1px solid #ccc; padding-top:1em;">
+      <h2 style="color:#2563eb; text-align:center; font-size:1.2em;">Previous Attempts</h2>
+      <div id="statsTable" style="max-height:200px; overflow-y:auto;">
+        <!-- Stats will be inserted here -->
+      </div>
+      <div style="text-align:center; margin-top:1em;">
+        <button id="resetStatsBtn" style="background-color: #dc2626; font-size:0.9em; padding:0.5em 1em;">
+          Reset All Stats
+        </button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Word lists with definitions
+    const WORDS = {
+      easy: [
+        // Dolch Sight Words - Pre-primer and Primer Level
+        { word: "a", def: "Used to refer to any member of a group or category" },
+        { word: "and", def: "Used to connect words or phrases together" },
+        { word: "away", def: "To a different place; not here" },
+        { word: "big", def: "Large in size" },
+        { word: "blue", def: "The color of the sky on a clear day" },
+        { word: "can", def: "To be able to do something" },
+        { word: "come", def: "To move towards someone or something" },
+        { word: "down", def: "Moving from higher to lower" },
+        { word: "find", def: "To discover or locate something" },
+        { word: "for", def: "Intended to be given to" },
+        { word: "funny", def: "Causing laughter or amusement" },
+        { word: "go", def: "To move or travel to another place" },
+        { word: "help", def: "To assist or aid someone" },
+        { word: "here", def: "In this place" },
+        { word: "I", def: "Used to refer to oneself" },
+        { word: "in", def: "Located inside or within" },
+        { word: "is", def: "A form of 'to be'" },
+        { word: "it", def: "Used to refer to a thing previously mentioned" },
+        { word: "jump", def: "To push off the ground with legs" },
+        { word: "little", def: "Small in size" },
+        { word: "look", def: "To use your eyes to see" },
+        { word: "make", def: "To create or build something" },
+        { word: "me", def: "Used to refer to oneself as the object" },
+        { word: "my", def: "Belonging to me" },
+        { word: "not", def: "Used to express negation" },
+        { word: "one", def: "The first number" },
+        { word: "play", def: "To engage in activity for fun" },
+        { word: "red", def: "The color of a stop sign" },
+        { word: "run", def: "To move faster than walking" },
+        { word: "said", def: "Past tense of say" },
+        { word: "see", def: "To perceive with the eyes" },
+        { word: "the", def: "Used to point to a specific thing" },
+        { word: "three", def: "The number after two" },
+        { word: "to", def: "Moving toward something" },
+        { word: "two", def: "The number after one" },
+        { word: "up", def: "Toward a higher position" },
+        { word: "we", def: "Referring to oneself and others" },
+        { word: "where", def: "In or at what place" },
+        { word: "yellow", def: "The color of the sun" },
+        { word: "you", def: "The person being spoken to" }
+      ],
+      medium: [
+        // Grade 2-3 Level Spelling Words
+        { word: "above", def: "In or to a higher place" },
+        { word: "around", def: "In a circle or circular motion" },
+        { word: "because", def: "For the reason that" },
+        { word: "before", def: "Earlier than; in front of" },
+        { word: "better", def: "More good or improved" },
+        { word: "brother", def: "A male sibling" },
+        { word: "brought", def: "Past tense of bring" },
+        { word: "carry", def: "To transport or move while supporting" },
+        { word: "clean", def: "Free from dirt or marks" },
+        { word: "drink", def: "To take liquid into the mouth" },
+        { word: "eight", def: "The number after seven" },
+        { word: "father", def: "A male parent" },
+        { word: "first", def: "Coming before all others" },
+        { word: "friend", def: "A person you like and trust" },
+        { word: "ground", def: "The solid surface of the Earth" },
+        { word: "heard", def: "Past tense of hear" },
+        { word: "laugh", def: "To show amusement with sound" },
+        { word: "light", def: "Brightness or illumination" },
+        { word: "money", def: "What we use to buy things" },
+        { word: "morning", def: "The early part of the day" },
+        { word: "again", def: "One more time" },
+        { word: "always", def: "At all times" },
+        { word: "animal", def: "A living creature" },
+        { word: "answer", def: "A response to a question" },
+        { word: "apple", def: "A round fruit that grows on trees" },
+        { word: "basket", def: "A container made of woven material" },
+        { word: "beach", def: "Sandy shore by the ocean" },
+        { word: "bread", def: "Baked food made from flour" },
+        { word: "butter", def: "A spread made from cream" },
+        { word: "catch", def: "To grab something moving" },
+        { word: "chair", def: "A piece of furniture to sit on" },
+        { word: "cheese", def: "A food made from milk" },
+        { word: "church", def: "A building for worship" },
+        { word: "circle", def: "A round shape" },
+        { word: "class", def: "A group of students learning together" },
+        { word: "clock", def: "A device that tells time" },
+        { word: "cloud", def: "A white or gray mass in the sky" },
+        { word: "color", def: "How something looks in terms of shade" },
+        { word: "corner", def: "Where two lines or surfaces meet" },
+        { word: "cover", def: "To put something over" },
+        { word: "cream", def: "The rich part of milk" },
+        { word: "dance", def: "To move to music" },
+        { word: "dream", def: "Images in your mind while sleeping" },
+        { word: "dress", def: "A piece of clothing" },
+        { word: "drive", def: "To control a vehicle" },
+        { word: "early", def: "At or near the beginning" },
+        { word: "earth", def: "The planet we live on" },
+        { word: "empty", def: "Containing nothing" },
+        { word: "every", def: "Each one of a group" },
+        { word: "fancy", def: "Decorative or elegant" },
+        { word: "field", def: "An open area of land" },
+        { word: "fifth", def: "Coming after fourth" },
+        { word: "floor", def: "The bottom surface of a room" },
+        { word: "flour", def: "Powder made from ground grain" },
+        { word: "follow", def: "To come after something" },
+        { word: "fresh", def: "Recently made or obtained" },
+        { word: "fruit", def: "Sweet food that grows on plants" },
+        { word: "glass", def: "A clear, hard material" },
+        { word: "grade", def: "A level in school" },
+        { word: "grass", def: "Green plants that cover the ground" },
+        { word: "group", def: "Several things or people together" },
+        { word: "happy", def: "Feeling or showing pleasure" },
+        { word: "heart", def: "The organ that pumps blood" },
+        { word: "heavy", def: "Having great weight" },
+        { word: "horse", def: "A large animal used for riding" },
+        { word: "house", def: "A building where people live" },
+        { word: "juice", def: "Liquid from fruits or vegetables" },
+        { word: "knife", def: "A tool used for cutting" },
+        { word: "leave", def: "To go away from" },
+        { word: "letter", def: "Written message or alphabet symbol" },
+        { word: "lunch", def: "Meal in the middle of the day" },
+        { word: "match", def: "To find one like another" },
+        { word: "month", def: "One of twelve parts of a year" },
+        { word: "mouth", def: "The opening for eating and speaking" },
+        { word: "music", def: "Sounds arranged in a pleasant way" },
+        { word: "never", def: "At no time" },
+        { word: "night", def: "Time when it's dark" },
+        { word: "noise", def: "A sound, especially a loud one" },
+        { word: "north", def: "Direction toward the North Pole" },
+        { word: "ocean", def: "The very large body of salt water" },
+        { word: "paper", def: "Material used for writing on" },
+        { word: "party", def: "A social gathering" },
+        { word: "paste", def: "A soft, sticky mixture" },
+        { word: "penny", def: "A one-cent coin" },
+        { word: "place", def: "A particular location" },
+        { word: "plain", def: "Clear and simple" },
+        { word: "plant", def: "A living thing that grows in earth" },
+        { word: "plate", def: "A flat dish for food" },
+        { word: "point", def: "A sharp end" },
+        { word: "pound", def: "A unit of weight" },
+        { word: "praise", def: "To express approval" },
+        { word: "proud", def: "Feeling pleased about something" },
+        { word: "queen", def: "A female ruler" },
+        { word: "quiet", def: "Making little or no noise" },
+        { word: "radio", def: "Device for receiving broadcast signals" },
+        { word: "ready", def: "Prepared for something" },
+        { word: "river", def: "A large natural stream of water" },
+        { word: "round", def: "Shaped like a circle" },
+        { word: "score", def: "The number of points in a game" },
+        { word: "shape", def: "The form of something" },
+        { word: "sheep", def: "An animal with thick wool" },
+        { word: "shirt", def: "A piece of clothing worn on top" },
+        { word: "shore", def: "The land along a body of water" },
+        { word: "short", def: "Not long or tall" },
+        { word: "since", def: "From a time in the past" },
+        { word: "skate", def: "To glide on wheels or ice" },
+        { word: "sleep", def: "To rest with eyes closed" },
+        { word: "slide", def: "To move smoothly along" },
+        { word: "smile", def: "To show happiness with your face" },
+        { word: "smoke", def: "Gray cloud from fire" },
+        { word: "snake", def: "A long reptile with no legs" },
+        { word: "space", def: "Empty area or the universe" },
+        { word: "speak", def: "To say words" },
+        { word: "spend", def: "To use money to buy things" },
+        { word: "sport", def: "A physical game or activity" },
+        { word: "spring", def: "Season between winter and summer" },
+        { word: "stamp", def: "To press down firmly" },
+        { word: "stand", def: "To be upright on feet" },
+        { word: "state", def: "A part of a country" },
+        { word: "steam", def: "Water in the form of hot gas" },
+        { word: "steel", def: "A strong metal material" },
+        { word: "stick", def: "A thin piece of wood" },
+        { word: "stone", def: "A hard piece of rock" },
+        { word: "store", def: "A place to buy things" },
+        { word: "story", def: "A tale or account of events" },
+        { word: "street", def: "A road in a city or town" },
+        { word: "sugar", def: "Sweet white or brown crystals" },
+        { word: "summer", def: "The warmest season" },
+        { word: "sweet", def: "Tasting like sugar" },
+        { word: "table", def: "A piece of furniture with a flat top" },
+        { word: "teach", def: "To help someone learn" },
+        { word: "thank", def: "To express gratitude" },
+        { word: "thick", def: "Having a large distance between surfaces" },
+        { word: "thing", def: "Any object, matter, or item" },
+        { word: "think", def: "To use your mind to consider" },
+        { word: "third", def: "Coming after second" },
+        { word: "those", def: "Referring to things previously mentioned" },
+        { word: "thumb", def: "The short, thick finger" },
+        { word: "tiger", def: "A large striped cat" },
+        { word: "tired", def: "Needing rest or sleep" },
+        { word: "tooth", def: "A hard white thing in your mouth" },
+        { word: "touch", def: "To put your hand on" },
+        { word: "trade", def: "To exchange one thing for another" },
+        { word: "train", def: "A connected line of railroad cars" },
+        { word: "treat", def: "Something special and enjoyable" },
+        { word: "truck", def: "A large vehicle for carrying things" },
+        { word: "twice", def: "Two times" },
+        { word: "uncle", def: "The brother of your parent" },
+        { word: "under", def: "Below or beneath something" },
+        { word: "value", def: "How much something is worth" },
+        { word: "visit", def: "To go to see someone" },
+        { word: "voice", def: "The sound made when speaking" },
+        { word: "watch", def: "To look at something carefully" },
+        { word: "water", def: "Clear liquid needed for life" },
+        { word: "wheat", def: "A plant used to make flour" },
+        { word: "wheel", def: "A round thing that turns" },
+        { word: "which", def: "Used to ask about a choice" },
+        { word: "while", def: "During the time that" },
+        { word: "white", def: "The color of snow" },
+        { word: "whole", def: "Complete or entire" },
+        { word: "woman", def: "An adult female person" },
+        { word: "world", def: "The Earth and all life on it" },
+        { word: "would", def: "Used to talk about what might happen" },
+        { word: "write", def: "To make letters or words" },
+        { word: "young", def: "In an early stage of life" },
+        { word: "afternoon", def: "The time between noon and evening" },
+        { word: "airplane", def: "A flying vehicle with wings" },
+        { word: "baseball", def: "A game played with a bat and ball" },
+        { word: "bathroom", def: "A room with a toilet and sink" },
+        { word: "birthday", def: "The day someone was born" },
+        { word: "blanket", def: "A covering used for warmth" },
+        { word: "breakfast", def: "The first meal of the day" },
+        { word: "building", def: "A structure with walls and a roof" },
+        { word: "butterfly", def: "An insect with colorful wings" },
+        { word: "calendar", def: "A chart showing days and months" },
+        { word: "camping", def: "Sleeping outdoors in a tent" },
+        { word: "chocolate", def: "A sweet brown food from cocoa" },
+        { word: "classroom", def: "A room where students learn" },
+        { word: "clothing", def: "Things people wear" },
+        { word: "continue", def: "To keep going" },
+        { word: "decision", def: "A choice that is made" },
+        { word: "direction", def: "The way something is going" },
+        { word: "envelope", def: "Paper covering for a letter" },
+        { word: "evening", def: "The end part of the day" },
+        { word: "everyone", def: "Every person" },
+        { word: "exciting", def: "Causing great interest" },
+        { word: "favorite", def: "Liked best of all" },
+        { word: "fishing", def: "Catching fish as a sport" },
+        { word: "football", def: "A sport with an oval ball" },
+        { word: "freedom", def: "Being able to do what you want" },
+        { word: "friendly", def: "Kind and nice to others" },
+        { word: "garden", def: "Area where plants are grown" },
+        { word: "grateful", def: "Feeling thankful" },
+        { word: "grocery", def: "Food and supplies store" },
+        { word: "holiday", def: "A day of celebration" },
+        { word: "hospital", def: "Place for medical care" },
+        { word: "hundred", def: "The number 100" },
+        { word: "kitchen", def: "Room for cooking food" },
+        { word: "language", def: "Words used to communicate" },
+        { word: "library", def: "Place with many books" },
+        { word: "machine", def: "Device that does work" },
+        { word: "medicine", def: "Something that treats illness" },
+        { word: "midnight", def: "Middle of the night" },
+        { word: "mountain", def: "Very high hill" },
+        { word: "multiply", def: "To increase by numbers" },
+        { word: "natural", def: "From nature" },
+        { word: "necklace", def: "Jewelry worn around neck" },
+        { word: "neighbor", def: "Person who lives nearby" },
+        { word: "notebook", def: "Book for writing notes" },
+        { word: "package", def: "Something wrapped up" },
+        { word: "pattern", def: "Design that repeats" },
+        { word: "pencil", def: "Writing tool with lead" },
+        { word: "picture", def: "Drawing or photograph" },
+        { word: "plastic", def: "Man-made material" },
+        { word: "playground", def: "Outdoor area for playing" },
+        { word: "pleasure", def: "Happy feeling" },
+        { word: "promise", def: "To say you will do something" },
+        { word: "question", def: "Something asked" },
+        { word: "rainbow", def: "Colored arc in the sky" },
+        { word: "reading", def: "Looking at and understanding words" },
+        { word: "sandwich", def: "Food between bread slices" },
+        { word: "science", def: "Study of the natural world" },
+        { word: "telephone", def: "Device for talking to people far away" },
+        { word: "weather", def: "Condition of the air outside" }
+        // Medium level complete - 200 words
+      ],
+      hard: [
+        // Advanced Spelling Words - Grade 4-6 and Spelling Bee Level
+        { word: "abundance", def: "A very large quantity" },
+        { word: "accommodate", def: "To provide space or lodging" },
+        { word: "achievement", def: "Something accomplished successfully" },
+        { word: "acquaintance", def: "A person one knows slightly" },
+        { word: "algorithm", def: "A step-by-step procedure for calculations" },
+        { word: "ambitious", def: "Having a strong desire for success" },
+        { word: "atmosphere", def: "The air around the Earth" },
+        { word: "benevolent", def: "Kind and generous" },
+        { word: "brilliant", def: "Exceptionally clever or talented" },
+        { word: "character", def: "The mental and moral qualities of a person" },
+        { word: "conscience", def: "Inner sense of right and wrong" },
+        { word: "deliberate", def: "Done on purpose" },
+        { word: "efficiency", def: "Working in a well-organized way" },
+        { word: "enthusiasm", def: "Great excitement for something" },
+        { word: "fascinating", def: "Extremely interesting" },
+        { word: "gracious", def: "Polite and kind" },
+        { word: "harmony", def: "Agreement in feeling or opinion" },
+        { word: "immediate", def: "Happening right away" },
+        { word: "knowledge", def: "Information and skills gained through experience" },
+        { word: "laboratory", def: "A room for scientific research" },
+        { word: "abbreviate", def: "To make shorter" },
+        { word: "absorption", def: "The process of taking something in" },
+        { word: "acceleration", def: "Increasing speed" },
+        { word: "accomplishment", def: "Something completed successfully" },
+        { word: "accordance", def: "Agreement or harmony" },
+        { word: "accumulate", def: "To gather or pile up" },
+        { word: "acknowledge", def: "To accept or recognize something" },
+        { word: "acquisition", def: "The act of getting something" },
+        { word: "adaptation", def: "Change to suit different conditions" },
+        { word: "adequate", def: "Enough for what is needed" },
+        { word: "adjacent", def: "Next to or adjoining something" },
+        { word: "adjustment", def: "A small change to improve something" },
+        { word: "admiration", def: "A feeling of respect and approval" },
+        { word: "adolescent", def: "A young person becoming an adult" },
+        { word: "advantageous", def: "Providing a benefit" },
+        { word: "advertise", def: "To make something publicly known" },
+        { word: "affectionate", def: "Showing caring or love" },
+        { word: "aggravate", def: "To make worse or more serious" },
+        { word: "aggressive", def: "Ready to attack or argue" },
+        { word: "allegiance", def: "Loyalty to a cause or person" },
+        { word: "alternative", def: "Another choice or possibility" },
+        { word: "ambassador", def: "An official representative" },
+        { word: "ambiguous", def: "Having more than one possible meaning" },
+        { word: "analyze", def: "To study the parts of something" },
+        { word: "anniversary", def: "Yearly return of a date" },
+        { word: "anticipate", def: "To expect or look ahead to" },
+        { word: "anxious", def: "Worried or nervous" },
+        { word: "apparatus", def: "Equipment for a specific purpose" },
+        { word: "appearance", def: "The way something looks" },
+        { word: "appropriate", def: "Suitable or proper" },
+        { word: "approximate", def: "Nearly correct or exact" },
+        { word: "arbitrary", def: "Based on random choice" },
+        { word: "architecture", def: "The design of buildings" },
+        { word: "argument", def: "A disagreement or debate" },
+        { word: "arithmetic", def: "The mathematics of numbers" },
+        { word: "artificial", def: "Made by humans, not natural" },
+        { word: "assistance", def: "Help or support" },
+        { word: "association", def: "A connection or relationship" },
+        { word: "assumption", def: "Something taken for granted" },
+        { word: "authentic", def: "Genuine or real" }
+      ]
+    };
+    
+    let currentList = [], currentIndex = 0, correct = 0, incorrect = 0;
+    
+    // Handle Enter key press
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load previous stats when page loads
+      loadStats();
+      
+      // Add reset stats button handler
+      document.getElementById('resetStatsBtn').onclick = () => {
+        if (confirm('Are you sure you want to reset all statistics? This cannot be undone.')) {
+          localStorage.removeItem('spellingStats');
+          loadStats();
+        }
+      };
+      
+      spellingInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter' && !submitBtn.disabled) {
+          e.preventDefault();
+          submitBtn.click();
+        }
+      });
+    });
+    const difficulty = document.getElementById('difficulty');
+    const startBtn = document.getElementById('startBtn');
+    const gameArea = document.getElementById('gameArea');
+    const speakBtn = document.getElementById('speakBtn');
+    const spellingInput = document.getElementById('spellingInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+
+    const sessionLength = document.getElementById('sessionLength');
+
+    // Fisher-Yates shuffle and slice for random word selection
+    function getRandomWords(wordList, count) {
+      const shuffled = [...wordList];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled.slice(0, count);
+    }
+
+    startBtn.onclick = () => {
+      const selectedLength = parseInt(sessionLength.value);
+      const allWords = WORDS[difficulty.value];
+      currentList = getRandomWords(allWords, selectedLength);
+      
+      currentIndex = 0; correct = 0; incorrect = 0;
+      gameArea.style.display = '';
+      startBtn.disabled = true;
+      difficulty.disabled = true;
+      sessionLength.disabled = true;
+      startTimer();
+      showWord();
+    };
+
+    function showWord() {
+      spellingInput.value = '';
+      spellingInput.disabled = false;
+      submitBtn.disabled = false;
+      const currentWord = currentList[currentIndex];
+      definition.textContent = `Definition: ${currentWord.def}`;
+      status.textContent = '';
+      progress.textContent = `Word ${currentIndex + 1} of ${currentList.length} | Correct: ${correct} | Incorrect: ${incorrect}`;
+      spellingInput.focus();
+      // Automatically speak the word
+      if ('speechSynthesis' in window && currentWord.word) {
+        const utter = new SpeechSynthesisUtterance(currentWord.word);
+        utter.rate = 0.8;
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    speakBtn.onclick = () => {
+      const currentWord = currentList[currentIndex];
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(currentWord.word);
+        utter.rate = 0.8;
+        window.speechSynthesis.speak(utter);
+      }
+    };
+
+    // Sound feedback function
+    function playSound(isCorrect) {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      if (isCorrect) {
+        // Bell-like "ding" sound for correct answer
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(1760, audioContext.currentTime); // High A note
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      } else {
+        // Lower "buzz" sound for incorrect answer
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+    }
+
+    submitBtn.onclick = () => {
+      const currentWord = currentList[currentIndex];
+      const guess = spellingInput.value.trim().toLowerCase();
+      if (guess === currentWord.word.toLowerCase()) {
+        status.textContent = `✅ Correct! "${currentWord.word}"`;
+        status.style.color = 'green';
+        playSound(true);
+        correct++;
+        spellingInput.disabled = true;
+        submitBtn.disabled = true;
+        setTimeout(() => {
+          currentIndex++;
+          if (currentIndex < currentList.length) {
+            showWord();
+          } else {
+            endGame();
+          }
+        }, 1000);
+      } else {
+        status.textContent = `❌ Incorrect! The correct spelling is "${currentWord.word}"`;
+        status.style.color = 'red';
+        playSound(false);
+        incorrect++;
+        // Add the word to the end of the list for another try
+        currentList.push(currentWord);
+        spellingInput.value = '';
+        spellingInput.focus();
+      }
+      progress.textContent = `Word ${currentIndex + 1} of ${currentList.length} | Correct: ${correct} | Incorrect: ${incorrect}`;
+    };
+
+    let startTime, timerInterval;
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const secs = (seconds % 60).toString().padStart(2, '0');
+      return `${mins}:${secs}`;
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      const timerDisplay = document.getElementById('timer');
+      timerInterval = setInterval(() => {
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        timerDisplay.textContent = `Time: ${formatTime(elapsedSeconds)}`;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      return elapsedSeconds;
+    }
+
+    // Load stats from localStorage
+    function loadStats() {
+      const stats = JSON.parse(localStorage.getItem('spellingStats') || '[]');
+      const statsTable = document.getElementById('statsTable');
+      if (stats.length === 0) {
+        statsTable.innerHTML = '<p style="text-align:center; color:#666;">No previous attempts yet.</p>';
+        return;
+      }
+
+      // Create table
+      let html = `
+        <table style="width:100%; border-collapse:collapse; margin:0 auto;">
+          <thead>
+            <tr style="background:#f3f4f6;">
+              <th style="padding:8px; text-align:left; border-bottom:1px solid #ddd;">Date</th>
+              <th style="padding:8px; text-align:left; border-bottom:1px solid #ddd;">Level</th>
+              <th style="padding:8px; text-align:left; border-bottom:1px solid #ddd;">Words</th>
+              <th style="padding:8px; text-align:left; border-bottom:1px solid #ddd;">Score</th>
+              <th style="padding:8px; text-align:left; border-bottom:1px solid #ddd;">Time</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+      // Add rows for each stat entry (most recent first)
+      stats.slice().reverse().forEach(stat => {
+        html += `
+          <tr>
+            <td style="padding:8px; border-bottom:1px solid #ddd;">${stat.date}</td>
+            <td style="padding:8px; border-bottom:1px solid #ddd;">${stat.difficulty}</td>
+            <td style="padding:8px; border-bottom:1px solid #ddd;">${stat.totalWords}</td>
+            <td style="padding:8px; border-bottom:1px solid #ddd;">${stat.correct}/${stat.totalWords} (${stat.percentage}%)</td>
+            <td style="padding:8px; border-bottom:1px solid #ddd;">${formatTime(stat.time)}</td>
+          </tr>`;
+      });
+
+      html += '</tbody></table>';
+      statsTable.innerHTML = html;
+    }
+
+    function saveStats(difficulty, totalWords, correct, percentage, timeElapsed) {
+      const stats = JSON.parse(localStorage.getItem('spellingStats') || '[]');
+      const now = new Date();
+      const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      
+      stats.push({
+        date: dateStr,
+        difficulty: difficulty,
+        totalWords: totalWords,
+        correct: correct,
+        percentage: percentage,
+        time: timeElapsed
+      });
+
+      // Keep only the last 10 attempts
+      if (stats.length > 10) {
+        stats.shift();
+      }
+
+      localStorage.setItem('spellingStats', JSON.stringify(stats));
+      loadStats();
+    }
+
+    function endGame() {
+      const totalWords = currentList.length;
+      const percentage = Math.round((correct / totalWords) * 100);
+      const timeElapsed = stopTimer();
+      status.textContent = `Game Over! Score: ${correct} correct, ${incorrect} incorrect (${percentage}%). Time: ${formatTime(timeElapsed)}`;
+      
+      // Save the stats
+      saveStats(difficulty.value, totalWords, correct, percentage, timeElapsed);
+      
+      startBtn.disabled = false;
+      difficulty.disabled = false;
+      sessionLength.disabled = false;
+      gameArea.style.display = 'none';
+    }
+
+    // Handle the exit button
+    document.getElementById('exitBtn').onclick = () => {
+      if (confirm('Are you sure you want to exit? Your progress will be lost.')) {
+        // Stop the timer
+        stopTimer();
+        
+        // Reset all game variables
+        currentList = [];
+        currentIndex = 0;
+        correct = 0;
+        incorrect = 0;
+        
+        // Reset UI
+        status.textContent = '';
+        definition.textContent = '';
+        progress.textContent = '';
+        spellingInput.value = '';
+        document.getElementById('timer').textContent = 'Time: 00:00';
+        
+        // Enable difficulty selection
+        startBtn.disabled = false;
+        difficulty.disabled = false;
+        sessionLength.disabled = false;
+        
+        // Hide game area
+        gameArea.style.display = 'none';
+      }
+    };
+  </script>
+</body>
+</html>
