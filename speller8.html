@@ -71,6 +71,10 @@
                         class="w-3/4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-300 transform hover:scale-[1.01]">
                     Check Spelling
                 </button>
+                    <button id="next-button"
+                            class="w-3/4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-yellow-300 transform hover:scale-[1.01] hidden">
+                        Try Again / Next Word
+                    </button>
 
                 <button id="exit-button"
                         class="w-1/4 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-300 transform hover:scale-[1.01]">
@@ -724,6 +728,7 @@
         const submitButton = document.getElementById('submit-button');
         const exitButton = document.getElementById('exit-button');
         const userInput = document.getElementById('user-input');
+        const nextButton = document.getElementById('next-button');
         const statusMessage = document.getElementById('status-message');
         const wordHint = document.getElementById('word-hint');
         const wordArea = document.getElementById('word-area');
@@ -1304,6 +1309,12 @@
         startButton.addEventListener('click', startGame);
         
         submitButton.addEventListener('click', checkSpelling);
+            nextButton.addEventListener('click', () => {
+                nextButton.classList.add('hidden');
+                submitButton.classList.remove('hidden');
+                nextWord();
+                speakCurrentWord();
+            });
         
         userInput.addEventListener('keypress', (e) => {
             // Enter key presses Check Spelling as long as the button is visible (i.e., not disabled by game flow)
