@@ -1112,6 +1112,7 @@
             speakCurrentWord();
         }
 
+        
         /**
          * Checks the user's input against the current word.
          */
@@ -1130,30 +1131,38 @@
 
                 // Move directly to the next word after a short delay
                 setTimeout(() => {
-                    // nextWord() sets up the next word
                     nextWord();
-                    // speakCurrentWord() is called only if currentWord is not null (i.e., not end-game)
-                    if (currentWord) speakCurrentWord(); 
+                    speakCurrentWord();
                 }, 1200);
 
             } else {
-                // Incorrect - Immediate Retry Logic
+                // Incorrect
                 playIncorrectSound();
                 incorrectSpells++;
-                
-                // Add word to end-of-session review queue ONLY on the first miss for a unique word.
-                if (!wordsFailedTracker.has(correctWord)) {
-                    wordsFailedTracker.add(correctWord);
-                    incorrectWordsQueue.push(currentWord); // Add word object to the review queue
-                    statusMessage.innerHTML = `<span class="text-red-600 font-bold">Incorrect! Try spelling it again. Word added to end-of-session review.</span>`;
-                } else {
-                    statusMessage.innerHTML = `<span class="text-red-600 font-bold">Incorrect! Try spelling it again.</span>`;
+                userInput.disabled = true;
+                speakButton.disabled = true;
+
+                // The correct spelling to display
+                const correctSpellingDisplay = `<span class="text-red-800 font-extrabold">${correctWord}</span>`;
+
+                // 1. Move current word to retention queue for immediate re-try
+                retentionQueue.push(currentWord);
+
+                // 2. Check if this is the first fail for this unique word to add it to the long-term review queue
+                let addedToReviewMsg = '';
+                // If it's not in the long-term queue yet, this is its first failure.
+                if (!incorrectWordsQueue.includes(currentWord)) {
+                    incorrectWordsQueue.push(currentWord);
+                    addedToReviewMsg = ` It has also been added to your <span class="text-red-700">end-of-session Review List</span>.`;
                 }
-                
-                userInput.value = ''; // Clear input for immediate retry
-                userInput.focus();
-                
-                // The current word remains loaded for immediate retry.
+
+                // FIX: Update status message to clearly show the correct spelling and the review plan
+                statusMessage.innerHTML = `<span class="text-red-600 font-bold">Incorrect!</span> The correct word was: ${correctSpellingDisplay}. You will try it again next. ${addedToReviewMsg}`;
+
+                // Show the 'Next Word' button
+                submitButton.classList.add('hidden');
+                nextButton.classList.remove('hidden');
+                nextButton.textContent = 'Try Again / Next Word';
             }
 
             updateScoreboard();
