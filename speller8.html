@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expanded Offline Spelling Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+        }
+        /* Style for the Speak Word button's icon for better visibility */
+        #speak-button svg path {
+            stroke: currentColor;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="game-container" class="bg-white shadow-2xl rounded-xl p-6 md:p-10 w-full max-w-2xl transition-all duration-300">
+        <h1 class="text-3xl font-extrabold text-blue-700 text-center mb-6">
+            <span role="img" aria-label="Book">📚</span> Expanded Spelling Challenge
+        </h1>
+
+        <div id="difficulty-select-container" class="mb-4">
+            <label for="difficulty-select" class="block text-sm font-medium text-gray-700 mb-2">Select Difficulty:</label>
+            <select id="difficulty-select" class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+                <option value="level1">Level 1: Sight Words (64 Words)</option>
+                <option value="level2">Level 2: Common Words (~200+ Words)</option>
+                <option value="level3">Level 3: Advanced Vocabulary (~200+ Words)</option>
+            </select>
+        </div>
+
+        <div id="word-count-select-container" class="mb-6">
+            <label for="word-count-select" class="block text-sm font-medium text-gray-700 mb-2">Select Session Length:</label>
+            <select id="word-count-select" class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+                </select>
+        </div>
+
+        <div id="timer-display" class="text-center mb-4 text-2xl font-mono font-bold text-gray-800 hidden">
+            Time: <span id="current-time">00:00</span>
+        </div>
+
+        <div id="status-message" class="text-center mb-6 h-8 text-lg font-semibold text-gray-700">
+            Game is ready!
+        </div>
+
+        <div id="word-area" class="text-center mb-6 hidden">
+            <button id="speak-button"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-green-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a.5.5 0 00-.817.132l-3.921 7.842a.5.5 0 00.917.456l3.821-7.642a.5.5 0 00.001-.788zm-.922-2.788a.5.5 0 00-.77.632L12.921 9.42a.5.5 0 00.77-.632l-1.07-1.166zM7.5 10a.5.5 0 00-.5.5v3a.5.5 0 001 0v-3a.5.5 0 00-.5-.5z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21a9 9 0 100-18 9 9 0 000 18z"/>
+                    <path d="M12 14l9-5-9-5-9 5 9 5z" fill="currentColor"/>
+                    <path d="M12 14l9-5-9-5-9 5 9 5z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Speak Word
+            </button>
+            <p id="word-hint" class="mt-4 text-sm text-gray-500 italic"></p>
+        </div>
+
+        <div id="input-area" class="flex flex-col space-y-4 hidden">
+            <input type="text" id="user-input" placeholder="Type the word here..."
+                    class="p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+
+            <div class="flex space-x-4">
+                <button id="submit-button"
+                        class="w-3/4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-300 transform hover:scale-[1.01]">
+                    Check Spelling
+                </button>
+
+                <button id="exit-button"
+                        class="w-1/4 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-300 transform hover:scale-[1.01]">
+                    Exit
+                </button>
+            </div>
+        </div>
+
+        <button id="start-button"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition duration-150 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300 transform hover:scale-[1.01]">
+            Start Game
+        </button>
+
+        <div class="flex justify-end w-full">
+            <button id="reset-history-button"
+                    class="mt-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1 px-4 text-sm rounded-lg transition duration-150 ease-in-out shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400 transform hover:scale-[1.005] max-w-xs">
+                Reset All Scores
+            </button>
+        </div>
+
+        <div id="progress-container" class="mt-6 mb-4 hidden">
+            <p class="text-sm font-medium text-gray-700 mb-1">Session Progress</p>
+            <div class="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-xs text-right text-gray-500 mt-1">0/0 Unique Words Presented (Review Queue: 0)</p>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-gray-200 flex justify-between text-center">
+            <div>
+                <p class="text-xl font-bold text-green-600" id="correct-count">0</p>
+                <p class="text-sm text-gray-500">Correct Attempts</p>
+            </div>
+            <div>
+                <p class="text-xl font-bold text-red-600" id="incorrect-count">0</p>
+                <p class="text-sm text-gray-500">Incorrect Attempts</p>
+            </div>
+            <div>
+                <p class="text-xl font-bold text-gray-700" id="total-count">0</p>
+                <p class="text-sm text-gray-500">Total Attempts</p>
+            </div>
+        </div>
+
+        <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full text-center">
+                <p id="message-text" class="text-lg font-semibold text-gray-800 mb-4">Error</p>
+                <div id="message-actions" class="flex justify-center space-x-3">
+                    </div>
+            </div>
+        </div>
+
+        <div class="mt-10 pt-6 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4 text-center">Local Session History</h2>
+            <div class="overflow-x-auto shadow-md rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correct</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Covered</th>
+                        </tr>
+                    </thead>
+                    <tbody id="session-history-body" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="6" class="px-3 py-3 text-center text-sm text-gray-500">Loading history...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const LOCAL_STORAGE_KEY = 'spellingChallengeHistoryStandalone';
+
+        // --- Word Data for Difficulty Levels (Hardcoded and pre-filtered) ---
+
+        // Level 1 words (hardcoded sight words - 64 words)
+        const LEVEL_1_WORDS = [
+            { word: "the", hint: "A common article used before a noun." },
+            { word: "of", hint: "Shows relationship or possession." },
+            { word: "and", hint: "Connects two or more things." },
+            { word: "a", hint: "Used before a singular noun starting with a consonant sound." },
+            { word: "to", hint: "Indicates movement toward a place or person." },
+            { word: "in", hint: "Indicates being contained within something." },
+            { word: "is", hint: "The present tense of the verb 'to be' (singular)." },
+            { word: "you", hint: "Refers to the person being addressed." },
+            { word: "that", hint: "Points to a specific thing or idea." },
+            { word: "it", hint: "Refers to a thing or animal previously mentioned." },
+            { word: "he", hint: "A masculine pronoun." },
+            { word: "was", hint: "The past tense of the verb 'to be' (singular)." },
+            { word: "for", hint: "Indicating the purpose of something." },
+            { word: "on", hint: "Indicating position above or in contact with." },
+            { word: "are", hint: "The present tense of the verb 'to be' (plural)." },
+            { word: "as", hint: "Used to make comparisons." },
+            { word: "with", hint: "Accompanied by another person or thing." },
+            { word: "his", hint: "Belonging to a male." },
+            { word: "they", hint: "Refers to a group of people or things." },
+            { word: "I", hint: "Refers to oneself." },
+            { word: "at", hint: "Indicates a specific location or time." },
+            { word: "be", hint: "The base form of the verb 'to be'." },
+            { word: "this", hint: "Points to something nearby." },
+            { word: "have", hint: "To own or hold." },
+            { word: "from", hint: "Indicating the starting point of a movement." },
+            { word: "or", hint: "Used to present an alternative." },
+            { word: "one", hint: "The number before two." },
+            { word: "had", hint: "The past tense of 'have'." },
+            { word: "by", hint: "Indicating proximity or the agent of an action." },
+            { word: "but", hint: "Introduces a contrasting idea." },
+            { word: "not", hint: "Used to make a statement negative." },
+            { word: "what", hint: "Asking for information about something." },
+            { word: "all", hint: "The whole quantity or extent." },
+            { word: "were", hint: "The past tense of the verb 'to be' (plural)." },
+            { word: "we", hint: "Refers to oneself and others." },
+            { word: "when", hint: "Asking about the time of an event." },
+            { word: "your", hint: "Belonging to the person being addressed." },
+            { word: "can", hint: "Expresses ability or possibility." },
+            { word: "said", hint: "The past tense of 'say'." },
+            { word: "there", hint: "Referring to a place." },
+            { word: "use", hint: "To employ something for a purpose." },
+            { word: "go", hint: "To move from one place to another." },
+            { word: "look", hint: "To direct one's gaze toward something." },
+            { word: "make", hint: "To create or form something." },
+            { word: "like", hint: "To find something pleasant or attractive." },
+            { word: "out", hint: "Moving away from the interior." },
+            { word: "find", hint: "To discover something." },
+            { word: "will", hint: "Expresses the future tense." },
+            { word: "just", hint: "Exactly, or only recently." },
+            { word: "give", hint: "To hand over something." },
+            { word: "new", hint: "Not existing before." },
+            { word: "because", hint: "Giving a reason for something." },
+            { word: "around", hint: "Located or situated on every side." },
+            { word: "know", hint: "To be aware of a fact or situation." },
+            { word: "don't", hint: "Short for 'do not'." },
+            { word: "would", hint: "Expresses a condition or desire." },
+            { word: "write", hint: "To form letters or words on a surface." },
+            { word: "long", hint: "Having a great distance from end to end." },
+            { word: "down", hint: "Toward a lower place." },
+            { word: "see", hint: "To perceive with the eyes." },
+            { word: "me", hint: "Referring to oneself as the object of a verb." },
+            { word: "time", hint: "The indefinite continued progress of existence." },
+            { word: "no", hint: "The opposite of yes." },
+            { word: "word", hint: "A single unit of language with meaning." }
+        ];
+
+        // Level 2 words (Expanded Common, 4-8 letters, with pre-defined hints - 200+ words)
+        const LEVEL_2_WORDS = [
+            { word: "absence", hint: "The state of being away." },
+            { word: "accept", hint: "To agree to receive or undertake." },
+            { word: "across", hint: "From one side to the other." },
+            { word: "address", hint: "The location of a building or person." },
+            { word: "advice", hint: "Guidance or recommendations." },
+            { word: "allot", hint: "To give or apportion (something) to someone." },
+            { word: "already", hint: "Before the present time." },
+            { word: "amateur", hint: "A person who engages in a pursuit as a pastime." },
+            { word: "among", hint: "In the company of or surrounded by." },
+            { word: "analyze", hint: "To examine methodically and in detail." },
+            { word: "annual", hint: "Occurring once every year." },
+            { word: "apology", hint: "An expression of regret for an offense." },
+            { word: "apparent", hint: "Clearly visible or understood; obvious." },
+            { word: "argument", hint: "A reason or set of reasons given to persuade." },
+            { word: "athletic", hint: "Relating to sports or physical exertion." },
+            { word: "awkward", hint: "Difficult to use or handle; clumsy." },
+            { word: "balloon", hint: "A small inflatable rubber sack." },
+            { word: "barbarous", hint: "Uncivilized or savagely cruel." },
+            { word: "basic", hint: "Forming an essential foundation." },
+            { word: "begging", hint: "Asking for something earnestly." },
+            { word: "belief", hint: "An acceptance that something exists or is true." },
+            { word: "benefit", hint: "An advantage or profit gained." },
+            { word: "bicycle", hint: "A two-wheeled vehicle." },
+            { word: "bizarre", hint: "Extremely strange or unusual." },
+            { word: "breathe", hint: "To take air into the lungs and then expel it." },
+            { word: "bruise", hint: "An injury appearing as a discolored mark." },
+            { word: "business", hint: "A person's regular occupation or trade." },
+            { word: "calendar", hint: "A chart showing the days, weeks, and months." },
+            { word: "ceiling", hint: "The upper interior surface of a room." },
+            { word: "cemetery", hint: "A large burial ground." },
+            { word: "changeable", hint: "Liable to change or easily changed." },
+            { word: "chief", hint: "A leader or ruler of a people or clan." },
+            { word: "choose", hint: "To select from a number of alternatives." },
+            { word: "column", hint: "A vertical division of a page or text." },
+            { word: "coming", hint: "Approaching or drawing near." },
+            { word: "committee", hint: "A group of people appointed for a specific function." },
+            { word: "conscious", hint: "Aware of and responding to one's surroundings." },
+            { word: "control", hint: "The power to influence or direct people's behavior." },
+            { word: "council", hint: "An advisory or administrative body." },
+            { word: "courage", hint: "The ability to do something that frightens one." },
+            { word: "curious", hint: "Eager to know or learn something." },
+            { word: "definite", hint: "Clearly stated or decided." },
+            { word: "describe", hint: "To give an account in words of something." },
+            { word: "despair", hint: "The complete loss or absence of hope." },
+            { word: "develop", hint: "To grow or cause to grow and become more mature." },
+            { word: "difference", hint: "A point or way in which people or things are not the same." },
+            { word: "disappear", hint: "To cease to be visible." },
+            { word: "disease", hint: "A disorder of structure or function in an organism." },
+            { word: "dilemma", hint: "A situation requiring a choice between two undesirable options." },
+            { word: "eighth", hint: "Constituting number eight in a sequence." },
+            { word: "eligible", hint: "Meeting the conditions to be chosen." },
+            { word: "embarrass", hint: "To cause someone to feel awkward or ashamed." },
+            { word: "enemy", hint: "A person who is actively hostile to someone or something." },
+            { word: "entirely", hint: "Completely and fully." },
+            { word: "equal", hint: "Being the same in quantity, size, or value." },
+            { word: "equipped", hint: "Supplied with the necessary items for a particular purpose." },
+            { word: "especially", hint: "To a distinctly greater extent or degree." },
+            { word: "excite", hint: "To cause strong feelings of enthusiasm." },
+            { word: "exercise", hint: "Activity requiring physical effort." },
+            { word: "familiar", hint: "Well known from long or close association." },
+            { word: "finally", hint: "After a long time, typically at the end of a series of events." },
+            { word: "foreign", hint: "Of, from, or characteristic of another country." },
+            { word: "forty", hint: "The number equivalent to four times ten." },
+            { word: "friend", hint: "A person whom one knows and with whom one has a bond." },
+            { word: "fulfill", hint: "To bring to completion or reality." },
+            { word: "garage", hint: "A place for storing a motor vehicle." },
+            { word: "general", hint: "Affecting or concerning all or most people." },
+            { word: "genius", hint: "Exceptional intellectual or creative power." },
+            { word: "gorgeous", hint: "Extremely beautiful or attractive." },
+            { word: "guarantee", hint: "A formal promise or assurance." },
+            { word: "guard", hint: "To watch over in order to protect or control." },
+            { word: "height", hint: "The measurement from base to top." },
+            { word: "heroes", hint: "People admired for their courage or outstanding achievements." },
+            { word: "humorous", hint: "Causing laughter and amusement; funny." },
+            { word: "hurried", hint: "Done in a quick or hasty manner." },
+            { word: "imagine", hint: "To form a mental image or concept." },
+            { word: "immediately", hint: "At once; instantly." },
+            { word: "incident", hint: "An event or occurrence." },
+            { word: "instead", hint: "As an alternative or substitute." },
+            { word: "interrupt", hint: "To stop the continuous progress of an activity." },
+            { word: "island", hint: "A piece of land surrounded by water." },
+            { word: "jealous", hint: "Feeling or showing envy of someone or their achievements." },
+            { word: "journal", hint: "A daily record of news and events." },
+            { word: "judgment", hint: "The ability to make considered decisions." },
+            { word: "kernel", hint: "The edible part of a nut or seed." },
+            { word: "knowledge", hint: "Facts, information, and skills acquired." },
+            { word: "laugh", hint: "To make the spontaneous sounds of amusement." },
+            { word: "leisure", hint: "Time when one is not working or occupied." },
+            { word: "length", hint: "The measurement or extent of something from end to end." },
+            { word: "license", hint: "A permit from an authority to own or use something." },
+            { word: "likely", hint: "Such as well might happen or be true." },
+            { word: "lonely", hint: "Sad because one has no friends or company." },
+            { word: "loose", hint: "Not firmly or tightly fixed in place." },
+            { word: "making", hint: "The process of creating something." },
+            { word: "marriage", hint: "The legally recognized union of two people." },
+            { word: "meant", hint: "Intended to convey, signify, or understand." },
+            { word: "medieval", hint: "Relating to the Middle Ages." },
+            { word: "messenger", hint: "A person who carries a message or is a representative." },
+            { word: "minute", hint: "A period of time equal to sixty seconds." },
+            { word: "mischief", hint: "Playful misbehavior." },
+            { word: "moral", hint: "Concerned with the principles of right and wrong behavior." },
+            { word: "muscle", hint: "A band of fibrous tissue that can contract." },
+            { word: "natural", hint: "Existing in or derived from nature." },
+            { word: "necessary", hint: "Required to be done, achieved, or present; essential." },
+            { word: "neither", hint: "Not either of two people or things." },
+            { word: "notice", hint: "The fact of observing or paying attention to something." },
+            { word: "obstacle", hint: "A thing that blocks one's way or prevents progress." },
+            { word: "occasion", hint: "A particular event or time." },
+            { word: "occurred", hint: "Happen; take place (past tense)." },
+            { word: "official", hint: "Relating to an authority or public body." },
+            { word: "opinion", hint: "A view or judgment formed about something." },
+            { word: "original", hint: "Present or existing from the beginning." },
+            { word: "particular", hint: "Relating to a specific person or thing." },
+            { word: "perform", hint: "To carry out, accomplish, or fulfill an action." },
+            { word: "perhaps", hint: "Maybe; possibly." },
+            { word: "personal", hint: "Relating to or affecting a person." },
+            { word: "physical", hint: "Relating to the body as opposed to the mind." },
+            { word: "piece", hint: "A part of a larger object." },
+            { word: "planning", hint: "The process of making plans." },
+            { word: "pleasant", hint: "Giving a sense of happy satisfaction or enjoyment." },
+            { word: "possess", hint: "To have as property; to own." },
+            { word: "possible", hint: "Able to be done or achieved." },
+            { word: "practice", hint: "The actual application or use of an idea or method." },
+            { word: "precede", hint: "To come before (something) in time or position." },
+            { word: "prefer", hint: "To like one thing better than another." },
+            { word: "prepare", hint: "To make ready for use or consideration." },
+            { word: "pretty", hint: "Attractive in a delicate way." },
+            { word: "primitive", hint: "Relating to the early stage in the evolutionary process." },
+            { word: "privilege", hint: "A special right or advantage." },
+            { word: "probably", hint: "Almost certainly; very likely." },
+            { word: "promise", hint: "A declaration that one will do or refrain from doing something." },
+            { word: "purpose", hint: "The reason for which something is done or created." },
+            { word: "quarter", hint: "A period of fifteen minutes." },
+            { word: "receive", hint: "To be given, presented with, or paid." },
+            { word: "refer", hint: "To mention or allude to." },
+            { word: "relieve", hint: "To cause pain or distress to become less severe." },
+            { word: "remember", hint: "To recall to one's mind." },
+            { word: "reply", hint: "To say something in response to something someone has said." },
+            { word: "rhyme", hint: "Correspondence of sound between words or the endings of words." },
+            { word: "rhythm", hint: "A strong, regular, repeated pattern of sound." },
+            { word: "schedule", hint: "A plan for carrying out a process or procedure." },
+            { word: "science", hint: "The systematic study of the natural world." },
+            { word: "secretary", hint: "A person employed by an individual to deal with correspondence." },
+            { word: "sense", hint: "A faculty by which external stimuli are perceived." },
+            { word: "separate", hint: "Constituting a unit in itself; standing apart." },
+            { word: "service", hint: "The action of helping or doing work for someone." },
+            { word: "shining", hint: "Giving out a bright light." },
+            { word: "sincerely", hint: "In a genuine or heartfelt way." },
+            { word: "special", hint: "Better, greater, or otherwise different from what is usual." },
+            { word: "stomach", hint: "The internal organ in which the first part of digestion occurs." },
+            { word: "straight", hint: "Extending or moving uniformly in one direction." },
+            { word: "strength", hint: "The quality or state of being physically strong." },
+            { word: "success", hint: "The accomplishment of an aim or purpose." },
+            { word: "suppose", hint: "To assume that something is the case on the basis of evidence." },
+            { word: "surprised", hint: "Feeling or showing surprise." },
+            { word: "teacher", hint: "A person who teaches, especially in a school." },
+            { word: "their", hint: "Belonging to or associated with the people or things previously mentioned." },
+            { word: "though", hint: "Despite the fact that." },
+            { word: "thorough", hint: "Done completely and with great attention to detail." },
+            { word: "thought", hint: "An idea or opinion produced by thinking." },
+            { word: "through", hint: "Moving in one side and out of the other side of." },
+            { word: "tomorrow", hint: "The day after today." },
+            { word: "truly", hint: "In a truthful manner; genuinely." },
+            { word: "until", hint: "Up to the time of." },
+            { word: "unusual", hint: "Not habitually or commonly occurring or done." },
+            { word: "useful", hint: "Able to be used for a practical purpose." },
+            { word: "usually", hint: "Under normal conditions; generally." },
+            { word: "village", hint: "A group of houses and associated buildings, larger than a hamlet." },
+            { word: "weather", hint: "The state of the atmosphere at a particular place and time." },
+            { word: "weird", hint: "Suggesting something supernatural; uncanny." },
+            { word: "wherever", hint: "In or to whatever place." },
+            { word: "whole", hint: "All of something." },
+            { word: "woman", hint: "An adult female human being." },
+            { word: "written", hint: "Set down in writing." },
+            { word: "yacht", hint: "A medium-sized boat for pleasure." },
+            { word: "your", hint: "Belonging to the person or people that the speaker is addressing." },
+            { word: "youth", hint: "The period between childhood and adult age." },
+            { word: "amongst", hint: "Surrounded by; in the company of." },
+            { word: "courageous", hint: "Not deterred by danger or pain." },
+            { word: "drought", hint: "A prolonged period of abnormally low rainfall." },
+            { word: "guilty", hint: "Culpable of or responsible for a specified wrongdoing." },
+            { word: "heighten", hint: "To make or become more intense." },
+            { word: "heir", hint: "A person legally entitled to the property of another." },
+            { word: "knight", hint: "A man who served his sovereign or lord as a mounted soldier." },
+            { word: "liquefy", hint: "To make or become liquid." },
+            { word: "plaid", hint: "A pattern of crossed bands of color." },
+            { word: "posh", hint: "Elegant or stylishly luxurious." },
+            { word: "queue", hint: "A line or sequence of people awaiting their turn." },
+            { word: "schedule", hint: "A plan for carrying out a process or procedure." },
+            { word: "shepherd", hint: "A person who tends and rears sheep." },
+            { word: "subtle", hint: "So delicate or precise as to be difficult to analyze." },
+            { word: "surely", hint: "With certainty and without doubt." },
+            { word: "tomb", hint: "A large vault for burying the dead." },
+            { word: "tough", hint: "Strong enough to withstand adverse conditions." },
+            { word: "vacuum", hint: "A space entirely devoid of matter." },
+            { word: "weirdo", hint: "A person whose dress or behavior is eccentric." },
+            { word: "wouldn't", hint: "Contraction of 'would not'." },
+            { word: "wrench", hint: "A sudden violent twist or pull." },
+            { word: "acquire", hint: "To obtain something." },
+            { word: "addressing", hint: "Speaking to someone." },
+            { word: "aisle", hint: "A passage between rows of seats." },
+            { word: "believe", hint: "To accept as true." },
+            { word: "colonel", hint: "A high-ranking military officer." },
+            { word: "decide", hint: "To resolve or settle a question." },
+            { word: "discreet", hint: "Careful and circumspect in one's speech or actions." },
+            { word: "divide", hint: "To separate into parts." },
+            { word: "fortress", hint: "A military stronghold." },
+            { word: "hungry", hint: "Feeling a desire or need for food." },
+            { word: "junior", hint: "Of or characteristic of a younger person." },
+            { word: "label", hint: "A small piece of paper, fabric, or plastic attached to an object." },
+            { word: "maintenance", hint: "The process of keeping something in good condition." },
+            { word: "maritime", hint: "Connected with the sea, especially in relation to seafaring commercial or military activity." },
+            { word: "mischievous", hint: "Causing or showing a fondness for causing trouble." },
+            { word: "neighbor", hint: "A person living next door or near another." },
+            { word: "offense", hint: "A breach of a law or rule; an illegal act." },
+            { word: "parish", hint: "A small administrative district." },
+            { word: "perform", hint: "To carry out, accomplish, or fulfill an action." },
+            { word: "possession", hint: "The state of having, owning, or controlling something." },
+            { word: "pursuit", hint: "The action of following or trying to achieve something." },
+            { word: "question", hint: "A sentence worded or expressed so as to elicit information." },
+            { word: "receive", hint: "To be given, presented with, or paid (something)." },
+            { word: "regard", hint: "To consider or think of (someone or something) in a specified way." },
+            { word: "relief", hint: "A feeling of reassurance and relaxation." },
+            { word: "satellite", hint: "An artificial body placed in orbit around the earth." },
+            { word: "solemn", hint: "Formal and dignified." },
+            { word: "straighten", hint: "To make or become straight." },
+            { word: "surprise", hint: "An unexpected or astonishing event." },
+            { word: "tongue", hint: "The fleshy muscular organ in the mouth." },
+            { word: "toward", hint: "In the direction of." },
+            { word: "weirdly", hint: "In a strange or uncanny manner." },
+            { word: "yield", hint: "To produce or provide." },
+            { word: "adequate", hint: "Satisfactory or acceptable in quality or quantity." },
+            { word: "authority", hint: "The power or right to give orders." },
+            { word: "beneath", hint: "Extending directly underneath." },
+            { word: "curiosity", hint: "A strong desire to know or learn something." },
+            { word: "daughter", hint: "A girl or woman in relation to her parents." },
+            { word: "economy", hint: "The wealth and resources of a country." },
+            { word: "fiction", hint: "Literature describing imaginary events and people." },
+            { word: "guidance", hint: "Advice or information aimed at resolving a problem." },
+            { word: "hospital", hint: "An institution providing medical and surgical treatment." },
+            { word: "infinite", hint: "Limitless or endless in space, extent, or size." },
+            { word: "loosen", hint: "To make or become less tight or restrictive." },
+            { word: "marvelous", hint: "Extremely good; wonderful." },
+            { word: "mystery", hint: "Something that is difficult or impossible to understand or explain." },
+            { word: "patience", hint: "The capacity to accept or tolerate delay." },
+            { word: "purposeful", hint: "Having a clear aim or reason." },
+            { word: "ridiculous", hint: "Deserving or inviting mockery." },
+            { word: "silence", hint: "Complete absence of sound." },
+            { word: "succeed", hint: "To achieve the desired aim or result." },
+            { word: "twelfth", hint: "Constituting number twelve in a sequence." },
+            { word: "volunteer", hint: "A person who freely offers to take part in an enterprise." },
+            { word: "wrestle", hint: "To take part in a fight or struggle." }
+        ];
+
+        // Level 3 words (Expanded Advanced Vocabulary, 9+ letters, with pre-defined hints - 200+ words)
+        const LEVEL_3_WORDS = [
+            { word: "aberration", hint: "A departure from what is normal or desirable." },
+            { word: "abstinence", hint: "The practice of restraining oneself from indulging." },
+            { word: "accede", hint: "To agree to a demand, request, or treaty." },
+            { word: "accelerate", hint: "To begin to move more quickly." },
+            { word: "acclimatize", hint: "To adjust or become accustomed to a new climate." },
+            { word: "accommodate", hint: "To provide lodging or space for." },
+            { word: "acknowledge", hint: "To accept or admit the existence or truth of." },
+            { word: "acquiesce", hint: "To accept something reluctantly but without protest." },
+            { word: "admonish", hint: "To warn or reprimand someone firmly." },
+            { word: "allegiance", hint: "Loyalty or commitment to a superior or cause." },
+            { word: "ambiguous", hint: "Open to more than one interpretation." },
+            { word: "amnesia", hint: "Partial or total loss of memory." },
+            { word: "annihilate", hint: "To destroy utterly; obliterate." },
+            { word: "anonymous", hint: "Not identified by name; of unknown name." },
+            { word: "apothecary", hint: "A person who prepared and sold medicines." },
+            { word: "appellant", hint: "A person who applies to a higher court for a reversal." },
+            { word: "appropriate", hint: "Suitable or proper in the circumstances." },
+            { word: "archipelago", hint: "A group or chain of islands." },
+            { word: "assassination", hint: "The act of murdering an important person." },
+            { word: "belligerent", hint: "Hostile and aggressive." },
+            { word: "beneficiary", hint: "A person who derives advantage from something." },
+            { word: "boycott", hint: "To withdraw from commercial or social relations." },
+            { word: "bureaucracy", hint: "A system of government run by state officials." },
+            { word: "cadaverous", hint: "Resembling a corpse in being very pale." },
+            { word: "caricature", hint: "A picture or description that exaggerates features." },
+            { word: "catastrophe", hint: "An event causing great and often sudden damage or suffering." },
+            { word: "censure", hint: "Express severe disapproval of someone or something." },
+            { word: "charlatan", hint: "A person falsely claiming to have a special knowledge." },
+            { word: "chronology", hint: "The arrangement of events in the order of their occurrence." },
+            { word: "clientele", hint: "The customers of a business." },
+            { word: "commemoration", hint: "A ceremony or event to celebrate a person or event." },
+            { word: "commissioner", hint: "A member of a commission." },
+            { word: "commitment", hint: "The state or quality of being dedicated to a cause." },
+            { word: "concede", hint: "To admit that something is true or valid." },
+            { word: "concierge", hint: "A caretaker of an apartment building or hotel." },
+            { word: "connoisseur", hint: "An expert judge in matters of taste." },
+            { word: "conscientious", hint: "Wishing to do one's work or duty well and thoroughly." },
+            { word: "contemptible", hint: "Deserving contempt; despicable." },
+            { word: "corollary", hint: "A proposition that follows from one already proved." },
+            { word: "courteous", hint: "Polite, respectful, or considerate in behavior." },
+            { word: "decipher", hint: "To succeed in interpreting a cryptic meaning." },
+            { word: "deducible", hint: "Able to be inferred or concluded." },
+            { word: "deference", hint: "Humble submission and respect." },
+            { word: "deliberate", hint: "Done consciously and intentionally." },
+            { word: "denouement", hint: "The final part of a play, film, or narrative." },
+            { word: "desiccate", hint: "To remove the moisture from (something)." },
+            { word: "deteriorate", hint: "To become progressively worse." },
+            { word: "detrimental", hint: "Tending to cause harm." },
+            { word: "diaphanous", hint: "Light, delicate, and translucent." },
+            { word: "dilettante", hint: "A person who cultivates an area of interest." },
+            { word: "disparate", hint: "Essentially different in kind." },
+            { word: "dissuade", hint: "To persuade someone not to take a particular course of action." },
+            { word: "ecclesiastical", hint: "Relating to the Christian Church or its clergy." },
+            { word: "ecstasy", hint: "An overwhelming feeling of great happiness or joyful excitement." },
+            { word: "efficacy", hint: "The ability to produce a desired or intended result." },
+            { word: "elucidate", hint: "To make something clear; explain." },
+            { word: "encompass", hint: "To surround and have or hold within." },
+            { word: "ephemeral", hint: "Lasting for a very short time." },
+            { word: "equestrian", hint: "Relating to horse riding." },
+            { word: "equilibrium", hint: "A state of physical balance." },
+            { word: "esoteric", hint: "Intended for or likely to be understood by only a small number of people." },
+            { word: "eulogize", hint: "To praise highly in speech or writing." },
+            { word: "euphemism", hint: "A mild or indirect word substituted for a harsh one." },
+            { word: "exacerbate", hint: "To make a problem, bad situation, or negative feeling worse." },
+            { word: "exhilarate", hint: "To make (someone) feel very happy or elated." },
+            { word: "expedient", hint: "Convenient and practical, although possibly improper or immoral." },
+            { word: "extravagant", hint: "Lacking restraint in spending money or using resources." },
+            { word: "facetious", hint: "Treating serious issues with deliberately inappropriate humor." },
+            { word: "fallacious", hint: "Based on a mistaken belief." },
+            { word: "fluorescent", hint: "Emitting light by fluorescence." },
+            { word: "foreshadow", hint: "To be a warning or indication of (a future event)." },
+            { word: "fortitude", hint: "Courage in pain or adversity." },
+            { word: "fracas", hint: "A noisy disturbance or quarrel." },
+            { word: "fulcrum", hint: "The point on which a lever rests or is supported." },
+            { word: "garrulous", hint: "Excessively talkative, especially about trivial matters." },
+            { word: "grandiloquent", hint: "Pompous or extravagant in language." },
+            { word: "harbinger", hint: "A person or thing that announces or signals the approach of another." },
+            { word: "hierarchy", hint: "A system in which people or groups are ranked one above the other." },
+            { word: "hospitable", hint: "Friendly and welcoming to guests or strangers." },
+            { word: "hypocrisy", hint: "The practice of claiming to have moral standards to which one's own behavior does not conform." },
+            { word: "impeccable", hint: "In accordance with the highest standards of propriety." },
+            { word: "impervious", hint: "Unable to be affected by." },
+            { word: "impromptu", hint: "Done without being planned, organized, or rehearsed." },
+            { word: "inadvertent", hint: "Not resulting from or achieved through deliberate planning." },
+            { word: "incessant", hint: "Continuing without pause or interruption." },
+            { word: "incognito", hint: "Having one's true identity concealed." },
+            { word: "indictment", hint: "A formal charge or accusation of a serious crime." },
+            { word: "indigenous", hint: "Originating or occurring naturally in a particular place." },
+            { word: "indispensable", hint: "Absolutely necessary." },
+            { word: "inoculate", hint: "To treat (a person or animal) with a vaccine." },
+            { word: "insinuating", hint: "Suggesting or hinting at something bad in an indirect way." },
+            { word: "interminable", hint: "Endless or apparently endless." },
+            { word: "irascible", hint: "Having or showing a tendency to be easily angered." },
+            { word: "irrelevant", hint: "Not connected with or relevant to something." },
+            { word: "irreparable", hint: "Impossible to repair or put right." },
+            { word: "itinerant", hint: "Traveling from place to place." },
+            { word: "jeopardize", hint: "To put (someone or something) into a situation in which there is a danger of loss." },
+            { word: "labyrinth", hint: "A complicated irregular network of passages or paths." },
+            { word: "lamentable", hint: "Deplorably bad or unsatisfactory." },
+            { word: "lieutenant", hint: "A deputy or substitute acting for a superior." },
+            { word: "logorrhea", hint: "A tendency to excessive talkativeness." },
+            { word: "magnanimous", hint: "Generous or forgiving, especially toward a rival." },
+            { word: "maintenance", hint: "The process of keeping something in good condition." },
+            { word: "malaise", hint: "A general feeling of discomfort, illness, or uneasiness." },
+            { word: "maneuver", hint: "A movement or series of moves requiring skill and care." },
+            { word: "mediocre", hint: "Of only moderate quality; not very good." },
+            { word: "meticulous", hint: "Showing great attention to detail." },
+            { word: "millennium", hint: "A period of a thousand years." },
+            { word: "miscellaneous", hint: "Of various types or elements, or mixed." },
+            { word: "moratorium", hint: "A temporary prohibition of an activity." },
+            { word: "narcissism", hint: "Excessive interest in oneself and one's physical appearance." },
+            { word: "negligible", hint: "So small or unimportant as to be not worth considering." },
+            { word: "nonchalant", hint: "Feeling or appearing casually calm and relaxed." },
+            { word: "nuance", hint: "A subtle difference in meaning, expression, or sound." },
+            { word: "obfuscate", hint: "To deliberately make something difficult to understand." },
+            { word: "oblivious", hint: "Not aware of or not concerned about what is happening around one." },
+            { word: "obsequious", hint: "Obedient or attentive to an excessive or servile degree." },
+            { word: "occurrence", hint: "An incident or event." },
+            { word: "omniscient", hint: "Knowing everything." },
+            { word: "opportunity", hint: "A set of circumstances that makes it possible to do something." },
+            { word: "ostentatious", hint: "Characterized by vulgar or pretentious display." },
+            { word: "paraphernalia", hint: "Miscellaneous articles, especially equipment." },
+            { word: "penultimate", hint: "Second to last." },
+            { word: "perpendicular", hint: "At an angle of 90° to a given line or surface." },
+            { word: "phlegm", hint: "Thick viscous substance secreted by the mucous membranes." },
+            { word: "plausible", hint: "Seeming reasonable or probable." },
+            { word: "pneumonia", hint: "Lung inflammation caused by bacterial or viral infection." },
+            { word: "prejudice", hint: "Preconceived opinion not based on reason or experience." },
+            { word: "prerogative", hint: "A special right or privilege." },
+            { word: "propaganda", hint: "Information used to promote a political cause or point of view." },
+            { word: "psychology", hint: "The scientific study of the human mind and its functions." },
+            { word: "quandary", hint: "A state of perplexity or uncertainty over what to do." },
+            { word: "questionnaire", hint: "A set of printed or written questions." },
+            { word: "rebellion", hint: "An act of open, armed resistance to an established government." },
+            { word: "recommendation", hint: "A suggestion or proposal as to the best course of action." },
+            { word: "remittance", hint: "A sum of money sent in payment." },
+            { word: "rendezvous", hint: "A meeting at an agreed time and place." },
+            { word: "repertoire", hint: "A stock of plays, dances, or pieces that a company or performer is prepared to perform." },
+            { word: "restaurant", hint: "A place where people pay to sit and eat meals." },
+            { word: "rheumatism", hint: "Any disease characterized by inflammation and pain in the joints." },
+            { word: "sanctuary", hint: "A place of refuge or safety." },
+            { word: "schedule", hint: "A plan for carrying out a process or procedure." },
+            { word: "secretary", hint: "A person employed by an individual to deal with correspondence." },
+            { word: "separate", hint: "Constituting a unit in itself; standing apart." },
+            { word: "silhouette", hint: "The dark shape and outline visible against a brighter background." },
+            { word: "simultaneously", hint: "At the same time." },
+            { word: "sovereignty", hint: "Supreme power or authority." },
+            { word: "statuesque", hint: "Like a statue, especially in size or dignity." },
+            { word: "subsequently", hint: "Afterward; later." },
+            { word: "superintendent", hint: "A person who manages or superintends an organization." },
+            { word: "supersede", hint: "To take the place of (a person or thing previously in use)." },
+            { word: "surveillance", hint: "Close observation, especially of a suspected person." },
+            { word: "synonymous", hint: "Having the same or nearly the same meaning as another word." },
+            { word: "triumphant", hint: "Having won a battle or contest; victorious." },
+            { word: "tyrannical", hint: "Exercising power in a cruel or arbitrary way." },
+            { word: "ubiquitous", hint: "Present, appearing, or found everywhere." },
+            { word: "unforgettable", hint: "Impossible to forget." },
+            { word: "unnecessary", hint: "Not needed; needless." },
+            { word: "usurp", hint: "To take a position of power illegally or by force." },
+            { word: "vacillate", hint: "To alternate or waver between different opinions or actions." },
+            { word: "valedictorian", hint: "The student who has the highest academic achievements." },
+            { word: "vengeance", hint: "Punishment inflicted or retribution exacted for an injury or wrong." },
+            { word: "vicarious", hint: "Experienced in the imagination through the feelings of another." },
+            { word: "vulnerable", hint: "Exposed to the possibility of being attacked or harmed." },
+            { word: "whimsical", hint: "Playfully quaint or fanciful." },
+            { word: "zeppelin", hint: "A large German airship of the early 20th century." },
+            { word: "zenith", hint: "The time at which something is most powerful or successful." },
+            { word: "xylophone", hint: "A musical instrument played by striking a row of wooden bars." },
+            { word: "worrisome", hint: "Causing anxiety or concern." },
+            { word: "utilize", hint: "To make practical and effective use of." },
+            { word: "turbulence", hint: "Violent or unsteady movement of air or water." },
+            { word: "tremendous", hint: "Extremely large or great." },
+            { word: "tranquility", hint: "The quality or state of being tranquil; calmness." },
+            { word: "transferable", hint: "Able to be moved from one place to another." },
+            { word: "theoretical", hint: "Concerned with the theory of a subject rather than its practical application." },
+            { word: "misspell", hint: "To spell a word incorrectly." },
+            { word: "exquisite", hint: "Extremely beautiful and typically delicate." },
+            { word: "phenomenon", hint: "A fact or situation that is observed to exist or happen." },
+            { word: "preposterous", hint: "Contrary to reason or common sense; utterly absurd." },
+            { word: "perseverance", hint: "Persistence in doing something despite difficulty or delay." },
+            { word: "gregarious", hint: "Fond of company; sociable." },
+            { word: "unanimous", hint: "Fully in agreement." },
+            { word: "facetious", hint: "Treating serious issues with deliberately inappropriate humor." },
+            { word: "disseminate", hint: "To spread or disperse (something, especially information) widely." },
+            { word: "bellicose", hint: "Demonstrating aggression and willingness to fight." },
+            { word: "juxtaposition", hint: "The fact of two things being seen or placed close together with contrasting effect." },
+            { word: "subpoena", hint: "A writ ordering a person to attend a court." },
+            { word: "verisimilitude", hint: "The appearance of being true or real." },
+            { word: "parochial", hint: "Having a limited or narrow outlook or scope." },
+            { word: "nomenclature", hint: "The devising or choosing of names for things." },
+            { word: "charlatanism", hint: "The practice of being a fraud or imposter." },
+            { word: "crescendo", hint: "A gradual increase in loudness." },
+            { word: "diarrhea", hint: "A condition of frequent fluid bowel movements." },
+            { word: "fuchsia", hint: "A tropical shrub with drooping flowers." },
+            { word: "mnemonic", hint: "A system such as a pattern of letters or associations that assists in remembering something." },
+            { word: "surreptitious", hint: "Kept secret, especially because it would not be approved of." }
+        ];
+
+        const ALL_LEVELS = {
+            level1: LEVEL_1_WORDS,
+            level2: LEVEL_2_WORDS,
+            level3: LEVEL_3_WORDS
+        };
+
+        // --- Audio Configuration (Tone.js) ---
+        const synth = new Tone.Synth().toDestination();
+        let audioContextStarted = false;
+
+        function scheduleDing() {
+            const now = Tone.now();
+            synth.triggerAttackRelease("C5", "16n", now);
+            synth.triggerAttackRelease("E5", "16n", now + 0.1);
+        }
+
+        function playCorrectSound() {
+             if (!audioContextStarted) {
+                Tone.start().then(() => {
+                    audioContextStarted = true;
+                    scheduleDing();
+                }).catch(err => console.error("Tone.js failed to start audio context:", err));
+             } else {
+                 scheduleDing();
+             }
+        }
+
+        function scheduleBuzzer() {
+            const now = Tone.now();
+            synth.triggerAttackRelease("E4", "16n", now);
+            synth.triggerAttackRelease("C4", "8n", now + 0.05);
+         }
+
+        function playIncorrectSound() {
+             if (!audioContextStarted) {
+                Tone.start().then(() => {
+                    audioContextStarted = true;
+                    scheduleBuzzer();
+                }).catch(err => console.error("Tone.js failed to start audio context:", err));
+             } else {
+                 scheduleBuzzer();
+             }
+        }
+
+        // --- DOM Elements ---
+        const startButton = document.getElementById('start-button');
+        const speakButton = document.getElementById('speak-button');
+        const submitButton = document.getElementById('submit-button');
+        const exitButton = document.getElementById('exit-button');
+        const userInput = document.getElementById('user-input');
+        const statusMessage = document.getElementById('status-message');
+        const wordHint = document.getElementById('word-hint');
+        const wordArea = document.getElementById('word-area');
+        const inputArea = document.getElementById('input-area');
+        const correctCountEl = document.getElementById('correct-count');
+        const incorrectCountEl = document.getElementById('incorrect-count');
+        const totalCountEl = document.getElementById('total-count');
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const messageActions = document.getElementById('message-actions');
+        const difficultySelectContainer = document.getElementById('difficulty-select-container');
+        const difficultySelect = document.getElementById('difficulty-select');
+        const wordCountSelectContainer = document.getElementById('word-count-select-container');
+        const wordCountSelect = document.getElementById('word-count-select');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const timerDisplay = document.getElementById('timer-display');
+        const currentTimeEl = document.getElementById('current-time');
+        const sessionHistoryBody = document.getElementById('session-history-body');
+        const resetHistoryButton = document.getElementById('reset-history-button');
+
+        // --- Game State & Timer Variables ---
+        let currentWord = null;
+        let correctSpells = 0;
+        let incorrectSpells = 0;
+        let newWordIndex = 0; // Tracks index into currentWordList for NEW words
+        let incorrectWordsQueue = []; // Queue for later review of words missed on first attempt
+        let currentWordList = []; // The final, randomized list for the session
+        let wordsFailedTracker = new Set(); // Stores 'word' strings that have been added to the review queue
+
+        // Timer State
+        let startTime = null;
+        let timerInterval = null;
+        let finalCompletionTimeMs = 0;
+
+        // --- Utility Functions ---
+        
+        /**
+         * Encapsulates the Text-to-Speech logic for the current word.
+         * Disables the speak button and focuses input upon completion.
+         */
+        function speakCurrentWord() {
+            if (!currentWord) return;
+
+            const word = currentWord.word;
+            speakButton.disabled = true; // Disable button while speaking
+
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.rate = 0.8;
+                utterance.onend = () => {
+                    speakButton.disabled = false; // Re-enable after speaking
+                    userInput.focus();
+                };
+                utterance.onerror = (e) => {
+                    console.error('Speech synthesis error:', e);
+                    showMessage("Speech synthesis error occurred. Check your browser settings.");
+                    speakButton.disabled = false;
+                    userInput.focus();
+                };
+                window.speechSynthesis.speak(utterance);
+            } else {
+                 showMessage("Text-to-speech is not supported in your browser.");
+                 speakButton.disabled = false;
+                 userInput.focus();
+            }
+        }
+        
+        /**
+         * Converts milliseconds to a formatted MM:SS string.
+         * @param {number} ms - time in milliseconds.
+         * @returns {string} - Formatted time string.
+         */
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const pad = (num) => String(num).padStart(2, '0');
+            return `${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        /**
+         * Utility to close the modal box.
+         */
+        function closeMessageModal() {
+            messageBox.classList.add('hidden');
+            messageBox.classList.remove('flex');
+        }
+
+        /**
+         * Displays a simple alert message (using custom modal).
+         * @param {string} message - The message to display.
+         */
+        function showMessage(message) {
+            messageActions.innerHTML = '';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.textContent = 'Dismiss';
+            dismissBtn.className = 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition';
+            dismissBtn.onclick = closeMessageModal;
+            messageActions.appendChild(dismissBtn);
+
+            document.getElementById('message-text').textContent = message;
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('flex');
+        }
+
+        /**
+         * Displays a confirmation dialog (safe replacement for confirm()).
+         * @param {string} message - The confirmation question.
+         * @param {function} onConfirm - Callback to execute on confirmation.
+         */
+        function showConfirm(message, onConfirm) {
+            messageActions.innerHTML = '';
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.textContent = 'Yes, Proceed';
+            confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition';
+            confirmBtn.onclick = () => {
+                closeMessageModal();
+                onConfirm();
+            };
+            messageActions.appendChild(confirmBtn);
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'bg-gray-400 hover:bg-gray-500 text-gray-800 font-bold py-2 px-4 rounded transition';
+            cancelBtn.onclick = closeMessageModal;
+            messageActions.appendChild(cancelBtn);
+
+            document.getElementById('message-text').textContent = message;
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('flex');
+        }
+
+        /**
+         * Selects a random subset of words from the array.
+         * @param {Array<Object>} arr - The full array of word objects.
+         * @param {number} count - The number of words to select.
+         * @returns {Array<Object>} - A new array containing the selected words.
+         */
+        function selectRandomWords(arr, count) {
+            // Ensure we don't try to select more words than available
+            const actualCount = Math.min(count, arr.length);
+
+            const shuffled = arr.slice();
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled.slice(0, actualCount);
+        }
+
+        /**
+         * Updates the Word Count selector options based on the selected difficulty.
+         */
+        function updateWordCountSelector() {
+            const selectedLevel = difficultySelect.value;
+            wordCountSelect.innerHTML = '';
+
+            const allWordsForLevel = ALL_LEVELS[selectedLevel];
+            const maxAvailable = allWordsForLevel.length;
+
+            let optionsHtml = '';
+            // Standard session sizes
+            const sessionSizes = [20, 30, 50];
+            // Add larger options for the new big lists
+            if (maxAvailable >= 100) {
+                sessionSizes.push(100);
+            }
+            if (maxAvailable >= 150) {
+                 sessionSizes.push(150);
+            }
+
+            // Populate options HTML
+            sessionSizes.forEach(count => {
+                if (count <= maxAvailable) {
+                    optionsHtml += `<option value="${count}">${count} Words</option>`;
+                }
+            });
+
+            // Ensure "Full Set" is always an option
+            optionsHtml += `<option value="full">Full Set (${maxAvailable} Words)</option>`;
+            wordCountSelect.innerHTML = optionsHtml;
+            
+            // --- FIX: Ensure a valid option value is selected ---
+            
+            // 1. Determine the ideal default value (e.g., 50 for large lists)
+            let idealDefault = String(Math.min(50, maxAvailable));
+            
+            // 2. Select the value.
+            if (maxAvailable === 0) {
+                wordCountSelect.value = ''; // Empty list
+            } else if (maxAvailable < 20) {
+                // If the list is smaller than the smallest standard size (20), 
+                // the only practical option generated is "full".
+                wordCountSelect.value = 'full';
+            } else {
+                // For all lists 20 or larger, the calculated idealDefault (20, 30, or 50) 
+                // is guaranteed to be one of the generated option values.
+                wordCountSelect.value = idealDefault;
+            }
+        }
+
+        // --- Timer Functions ---
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            startTime = Date.now();
+            timerDisplay.classList.remove('hidden');
+
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        /**
+         * Stops the timer interval and returns the elapsed time.
+         */
+        function stopTimer() {
+            let elapsed = 0;
+            if (startTime) {
+                elapsed = Date.now() - startTime;
+            }
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            return elapsed;
+        }
+
+        function updateTimerDisplay() {
+            if (startTime) {
+                const elapsed = Date.now() - startTime;
+                currentTimeEl.textContent = formatTime(elapsed);
+            }
+        }
+
+        // --- LocalStorage Functions ---
+
+        /**
+         * Saves the session results to localStorage.
+         * @param {string} status - 'completed' or 'exited'.
+         */
+        function saveSessionResult(status) {
+            // newWordIndex is the number of unique words PRESENTED from the main list
+            const sessionData = {
+                timestamp: Date.now(),
+                difficulty: difficultySelect.value,
+                correct: correctSpells,
+                incorrect: incorrectSpells,
+                wordsCovered: newWordIndex,
+                total: currentWordList.length,
+                timeMs: finalCompletionTimeMs,
+                timeFormatted: formatTime(finalCompletionTimeMs),
+                status: status
+            };
+
+            try {
+                const history = loadHistoryFromStorage();
+                history.unshift(sessionData); // Add to the start
+
+                // Keep only the latest 10 sessions to prevent storage bloat
+                const limitedHistory = history.slice(0, 10);
+
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(limitedHistory));
+            } catch (error) {
+                console.error("Error saving to localStorage:", error);
+            }
+        }
+
+        /**
+         * Loads the session history from localStorage.
+         * @returns {Array<Object>} - The history array, or an empty array if none found.
+         */
+        function loadHistoryFromStorage() {
+            try {
+                const historyString = localStorage.getItem(LOCAL_STORAGE_KEY);
+                return historyString ? JSON.parse(historyString) : [];
+            } catch (error) {
+                console.error("Error loading history from localStorage:", error);
+                return [];
+            }
+        }
+
+        /**
+         * Renders the session history table from localStorage data.
+         */
+        function renderHistoryTable() {
+            const history = loadHistoryFromStorage();
+            sessionHistoryBody.innerHTML = ''; // Clear existing rows
+
+            if (history.length === 0) {
+                sessionHistoryBody.innerHTML = '<tr><td colspan="6" class="px-3 py-3 text-center text-sm text-gray-500">No session history recorded yet.</td></tr>';
+                return;
+            }
+
+            history.forEach(session => {
+                const date = new Date(session.timestamp).toLocaleDateString();
+                const levelMap = {
+                    'level1': 'L1: Sight',
+                    'level2': 'L2: Common',
+                    'level3': 'L3: Adv'
+                };
+                const statusClass = session.status === 'completed' ? 'text-green-600' : 'text-yellow-600';
+                const statusText = session.status.charAt(0).toUpperCase() + session.status.slice(1);
+
+                const row = sessionHistoryBody.insertRow();
+                row.className = 'hover:bg-gray-50';
+
+                row.insertCell().textContent = date;
+                row.insertCell().textContent = levelMap[session.difficulty];
+                row.insertCell().innerHTML = `<span class="${statusClass} font-semibold">${statusText}</span>`;
+                row.insertCell().textContent = session.timeFormatted;
+                row.insertCell().textContent = session.correct;
+                row.insertCell().textContent = `${session.wordsCovered}/${session.total}`;
+
+                // Add Tailwind classes to cells
+                Array.from(row.cells).forEach(cell => {
+                    cell.classList.add('px-3', 'py-3', 'whitespace-nowrap', 'text-sm', 'text-gray-700');
+                });
+            });
+        }
+
+        /**
+         * Clears all session history from localStorage.
+         */
+        function resetAllHistory() {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            renderHistoryTable();
+            showMessage("All spelling history has been permanently deleted! 🗑️");
+        }
+
+
+        // --- Core Game Functions ---
+
+        /**
+         * Initializes and starts a new game session.
+         */
+        function startGame() {
+            // 1. Reset State
+            resetGame();
+
+            // 2. Select Word List
+            const selectedLevel = difficultySelect.value;
+            const allWordsForLevel = ALL_LEVELS[selectedLevel];
+            const wordCountSetting = wordCountSelect.value;
+
+            let targetCount;
+            if (wordCountSetting === 'full') {
+                targetCount = allWordsForLevel.length;
+            } else {
+                // Robust parsing for targetCount to prevent NaN/0 when selecting words
+                const parsedCount = parseInt(wordCountSetting, 10);
+                // If parsing fails or is <= 0, default to the full list length.
+                targetCount = (parsedCount > 0) ? parsedCount : allWordsForLevel.length;
+            }
+
+            // Select random words for the session
+            currentWordList = selectRandomWords(allWordsForLevel, targetCount);
+
+            // 3. Final safety check on the list
+            if (currentWordList.length === 0) {
+                 showMessage("Error: No words could be selected for the session. Please ensure your selected difficulty level is populated and try again.");
+                 resetGame();
+                 return;
+            }
+
+            // 4. Update UI to Game Mode
+            difficultySelectContainer.classList.add('hidden');
+            wordCountSelectContainer.classList.add('hidden');
+            startButton.classList.add('hidden');
+            resetHistoryButton.classList.add('hidden');
+
+            wordArea.classList.remove('hidden');
+            inputArea.classList.remove('hidden');
+            progressContainer.classList.remove('hidden');
+
+            // 5. Start Timer and Game Loop
+            startTimer();
+            updateScoreboard();
+            updateProgress();
+
+            // Start the first word and speak it immediately
+            nextWord();
+            speakCurrentWord();
+        }
+
+        /**
+         * Checks the user's input against the current word.
+         */
+        function checkSpelling() {
+            if (!currentWord) return;
+            const userText = userInput.value.trim();
+            const correctWord = currentWord.word;
+
+            if (userText.toLowerCase() === correctWord.toLowerCase()) {
+                // Correct
+                playCorrectSound();
+                statusMessage.innerHTML = `<span class="text-green-600 font-bold">Correct! "${correctWord}"</span>`;
+                correctSpells++;
+                userInput.disabled = true;
+                speakButton.disabled = true;
+
+                // Move directly to the next word after a short delay
+                setTimeout(() => {
+                    // nextWord() sets up the next word
+                    nextWord();
+                    // speakCurrentWord() is called only if currentWord is not null (i.e., not end-game)
+                    if (currentWord) speakCurrentWord(); 
+                }, 1200);
+
+            } else {
+                // Incorrect - Immediate Retry Logic
+                playIncorrectSound();
+                incorrectSpells++;
+                
+                // Add word to end-of-session review queue ONLY on the first miss for a unique word.
+                if (!wordsFailedTracker.has(correctWord)) {
+                    wordsFailedTracker.add(correctWord);
+                    incorrectWordsQueue.push(currentWord); // Add word object to the review queue
+                    statusMessage.innerHTML = `<span class="text-red-600 font-bold">Incorrect! Try spelling it again. Word added to end-of-session review.</span>`;
+                } else {
+                    statusMessage.innerHTML = `<span class="text-red-600 font-bold">Incorrect! Try spelling it again.</span>`;
+                }
+                
+                userInput.value = ''; // Clear input for immediate retry
+                userInput.focus();
+                
+                // The current word remains loaded for immediate retry.
+            }
+
+            updateScoreboard();
+            updateProgress();
+        }
+
+        /**
+         * Sets up the next word challenge.
+         */
+        function nextWord() {
+            userInput.value = '';
+            
+            // Re-enable input and buttons
+            submitButton.classList.remove('hidden');
+            userInput.disabled = false;
+            speakButton.disabled = false;
+
+            // Check if the session is complete (no more new words AND no more incorrect words to review)
+            if (newWordIndex >= currentWordList.length && incorrectWordsQueue.length === 0) {
+                // Game Over - Session Completed
+                endGame('completed');
+                return;
+            }
+
+            // 1. Priority: Words that were incorrect on first attempt (review queue at the end of the session)
+            if (newWordIndex >= currentWordList.length && incorrectWordsQueue.length > 0) {
+                currentWord = incorrectWordsQueue.shift();
+                statusMessage.innerHTML = '<span class="text-red-600 font-semibold">Review Word: Spell this previously missed word!</span>';
+            }
+            // 2. Last Priority: A new word from the main list
+            else if (newWordIndex < currentWordList.length) {
+                currentWord = currentWordList[newWordIndex]; // Get the next word
+                newWordIndex++; // Increment index for the *next* new word
+                statusMessage.innerHTML = '<span class="text-blue-700 font-semibold">New Word!</span>';
+            } else {
+                // Should only happen if all conditions above fail, triggering end game
+                endGame('completed');
+                return;
+            }
+
+            // Set the hint
+            wordHint.textContent = `Hint: ${currentWord.hint}`;
+            
+            updateProgress(); // Update progress bar with new index
+
+            // Re-focus input immediately if the word is not being spoken automatically
+            if (!speechSynthesis || !speechSynthesis.speaking) {
+                userInput.focus();
+            }
+        }
+
+        /**
+         * Resets all game-related state variables and the UI to the pre-game state.
+         */
+        function resetGame() {
+            stopTimer(); // Ensure timer is off
+            startTime = null;
+            finalCompletionTimeMs = 0;
+            currentWord = null;
+            correctSpells = 0;
+            incorrectSpells = 0;
+            newWordIndex = 0;
+            incorrectWordsQueue = [];
+            currentWordList = [];
+            wordsFailedTracker = new Set(); // Reset the tracker
+
+            // Reset UI
+            userInput.value = '';
+            wordHint.textContent = '';
+            statusMessage.innerHTML = 'Game is ready! Select your options and press Start.';
+            currentTimeEl.textContent = '00:00';
+
+            updateScoreboard();
+            updateProgress(); // Resets progress display
+
+            // Show selectors and start button, hide game elements
+            difficultySelectContainer.classList.remove('hidden');
+            wordCountSelectContainer.classList.remove('hidden');
+            startButton.classList.remove('hidden');
+            resetHistoryButton.classList.remove('hidden');
+            wordArea.classList.add('hidden');
+            inputArea.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+            timerDisplay.classList.add('hidden');
+        }
+
+        /**
+         * Handles the end of the game session.
+         * @param {string} status - 'completed' or 'exited'.
+         */
+        function endGame(status) {
+            finalCompletionTimeMs = stopTimer();
+
+            // Save the session result before resetting the game state
+            saveSessionResult(status);
+
+            // Show the result message
+            const sessionLength = currentWordList.length;
+            const finalScoreText = `Your Final Score: ${correctSpells} correct attempts. Total unique words in session: ${sessionLength}. Time: ${formatTime(finalCompletionTimeMs)}.`;
+            const actionText = status === 'completed'
+                ? `Session completed! Congratulations! ${finalScoreText} See your history below.`
+                : `Session aborted. ${finalScoreText} Your progress has been saved to history.`;
+
+            // Render history to include the new session
+            renderHistoryTable();
+            showMessage(actionText);
+
+            // Reset UI to start screen
+            resetGame();
+        }
+
+        // --- UI Update Functions ---
+
+        /**
+         * Updates the score display in the footer.
+         */
+        function updateScoreboard() {
+            totalCountEl.textContent = correctSpells + incorrectSpells;
+            correctCountEl.textContent = correctSpells;
+            incorrectCountEl.textContent = incorrectSpells;
+        }
+
+        /**
+         * Updates the progress bar and text.
+         */
+        function updateProgress() {
+            const totalWords = currentWordList.length;
+            const wordsPresented = newWordIndex; // The count of unique words presented from the main list
+            
+            // Progress percentage reflects how far into the initial list the user has gone.
+            const percentage = totalWords > 0 ? (wordsPresented / totalWords) * 100 : 0;
+            
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `${wordsPresented}/${totalWords} Unique Words Presented (Review Queue: ${incorrectWordsQueue.length})`;
+        }
+
+        // --- Event Listeners and Initialization ---
+
+        startButton.addEventListener('click', startGame);
+        
+        submitButton.addEventListener('click', checkSpelling);
+        
+        userInput.addEventListener('keypress', (e) => {
+            // Enter key presses Check Spelling as long as the button is visible (i.e., not disabled by game flow)
+            if (e.key === 'Enter' && !userInput.disabled) {
+                checkSpelling();
+            }
+        });
+
+        exitButton.addEventListener('click', () => {
+             showConfirm("Are you sure you want to end the current spelling session? Your progress will be recorded.", () => {
+                 endGame('exited');
+             });
+        });
+
+        difficultySelect.addEventListener('change', updateWordCountSelector);
+
+        resetHistoryButton.addEventListener('click', () => {
+            showConfirm("This will permanently delete ALL of your saved spelling session history. Are you sure?", resetAllHistory);
+        });
+
+        // Use the new reusable speakCurrentWord function
+        speakButton.addEventListener('click', speakCurrentWord);
+
+        // --- Game Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Initialize selectors based on hardcoded words
+            updateWordCountSelector();
+            // 2. Load and display history
+            renderHistoryTable();
+        });
+    </script>
+</body>
+</html>
