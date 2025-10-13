@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expanded Offline Spelling Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+        }
+        /* Style for the Speak Word button's icon for better visibility */
+        #speak-button svg path {
+            stroke: currentColor;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="game-container" class="bg-white shadow-2xl rounded-xl p-6 md:p-10 w-full max-w-2xl transition-all duration-300">
+        <h1 class="text-3xl font-extrabold text-blue-700 text-center mb-6">
+            <span role="img" aria-label="Book">📚</span> Expanded Spelling Challenge
+        </h1>
+
+        <div id="difficulty-select-container" class="mb-4">
+            <label for="difficulty-select" class="block text-sm font-medium text-gray-700 mb-2">Select Difficulty:</label>
+            <select id="difficulty-select" class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+                <option value="level1">Level 1: Sight Words (64 Words)</option>
+                <option value="level2">Level 2: Common Words (~200+ Words)</option>
+                <option value="level3">Level 3: Advanced Vocabulary (~200+ Words)</option>
+            </select>
+        </div>
+
+        <div id="word-count-select-container" class="mb-6">
+            <label for="word-count-select" class="block text-sm font-medium text-gray-700 mb-2">Select Session Length:</label>
+            <select id="word-count-select" class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+                </select>
+        </div>
+
+        <div id="timer-display" class="text-center mb-4 text-2xl font-mono font-bold text-gray-800 hidden">
+            Time: <span id="current-time">00:00</span>
+        </div>
+
+        <div id="status-message" class="text-center mb-6 h-8 text-lg font-semibold text-gray-700">
+            Game is ready!
+        </div>
+
+        <div id="word-area" class="text-center mb-6 hidden">
+            <button id="speak-button"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-green-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a.5.5 0 00-.817.132l-3.921 7.842a.5.5 0 00.917.456l3.821-7.642a.5.5 0 00.001-.788zm-.922-2.788a.5.5 0 00-.77.632L12.921 9.42a.5.5 0 00.77-.632l-1.07-1.166zM7.5 10a.5.5 0 00-.5.5v3a.5.5 0 001 0v-3a.5.5 0 00-.5-.5z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21a9 9 0 100-18 9 9 0 000 18z"/>
+                    <path d="M12 14l9-5-9-5-9 5 9 5z" fill="currentColor"/>
+                    <path d="M12 14l9-5-9-5-9 5 9 5z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Speak Word
+            </button>
+            <p id="word-hint" class="mt-4 text-sm text-gray-500 italic"></p>
+        </div>
+
+        <div id="input-area" class="flex flex-col space-y-4 hidden">
+            <input type="text" id="user-input" placeholder="Type the word here..."
+                    class="p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg">
+
+            <div class="flex space-x-4">
+                <div class="relative w-3/4">
+                    <button id="submit-button"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-300 transform hover:scale-[1.01]">
+                        Check Spelling
+                    </button>
+                    <button id="next-button"
+                            class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-gray-300 transform hover:scale-[1.01] absolute inset-0 hidden">
+                        Next Word
+                    </button>
+                </div>
+
+                <button id="exit-button"
+                        class="w-1/4 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-300 transform hover:scale-[1.01]">
+                    Exit
+                </button>
+            </div>
+        </div>
+
+        <button id="start-button"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition duration-150 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300 transform hover:scale-[1.01]">
+            Start Game
+        </button>
+
+        <div class="flex justify-end w-full">
+            <button id="reset-history-button"
+                    class="mt-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1 px-4 text-sm rounded-lg transition duration-150 ease-in-out shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400 transform hover:scale-[1.005] max-w-xs">
+                Reset All Scores
+            </button>
+        </div>
+
+        <div id="progress-container" class="mt-6 mb-4 hidden">
+            <p class="text-sm font-medium text-gray-700 mb-1">Session Progress</p>
+            <div class="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-xs text-right text-gray-500 mt-1">0/0 Unique Words Presented (Mastered: 0)</p>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-gray-200 flex justify-between text-center">
+            <div>
+                <p class="text-xl font-bold text-green-600" id="correct-count">0</p>
+                <p class="text-sm text-gray-500">Correct Attempts</p>
+            </div>
+            <div>
+                <p class="text-xl font-bold text-red-600" id="incorrect-count">0</p>
+                <p class="text-sm text-gray-500">Incorrect Attempts</p>
+            </div>
+            <div>
+                <p class="text-xl font-bold text-gray-700" id="total-count">0</p>
+                <p class="text-sm text-gray-500">Total Attempts</p>
+            </div>
+        </div>
+
+        <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full text-center">
+                <p id="message-text" class="text-lg font-semibold text-gray-800 mb-4">Error</p>
+                <div id="message-actions" class="flex justify-center space-x-3">
+                    </div>
+            </div>
+        </div>
+
+        <div class="mt-10 pt-6 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4 text-center">Local Session History</h2>
+            <div class="overflow-x-auto shadow-md rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correct</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Covered</th>
+                        </tr>
+                    </thead>
+                    <tbody id="session-history-body" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="6" class="px-3 py-3 text-center text-sm text-gray-500">Loading history...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const LOCAL_STORAGE_KEY = 'spellingChallengeHistoryStandalone';
+
+        // --- Word Data for Difficulty Levels (Hardcoded and pre-filtered) ---
+
+        // Level 1 words (hardcoded sight words - UNCHANGED)
+        const LEVEL_1_WORDS = [
+            { word: "the", hint: "A common article used before a noun." },
+            { word: "of", hint: "Shows relationship or possession." },
+            { word: "and", hint: "Connects two or more things." },
+            { word: "a", hint: "Used before a singular noun starting with a consonant sound." },
+            { word: "to", hint: "Indicates movement toward a place or person." },
+            { word: "in", hint: "Indicates being contained within something." },
+            { word: "is", hint: "The present tense of the verb 'to be' (singular)." },
+            { word: "you", hint: "Refers to the person being addressed." },
+            { word: "that", hint: "Points to a specific thing or idea." },
+            { word: "it", hint: "Refers to a thing or animal previously mentioned." },
+            { word: "he", hint: "A masculine pronoun." },
+            { word: "was", hint: "The past tense of the verb 'to be' (singular)." },
+            { word: "for", hint: "Indicating the purpose of something." },
+            { word: "on", hint: "Indicating position above or in contact with." },
+            { word: "are", hint: "The present tense of the verb 'to be' (plural)." },
+            { word: "as", hint: "Used to make comparisons." },
+            { word: "with", hint: "Accompanied by another person or thing." },
+            { word: "his", hint: "Belonging to a male." },
+            { word: "they", hint: "Refers to a group of people or things." },
+            { word: "I", hint: "Refers to oneself." },
+            { word: "at", hint: "Indicates a specific location or time." },
+            { word: "be", hint: "The base form of the verb 'to be'." },
+            { word: "this", hint: "Points to something nearby." },
+            { word: "have", hint: "To own or hold." },
+            { word: "from", hint: "Indicating the starting point of a movement." },
+            { word: "or", hint: "Used to present an alternative." },
+            { word: "one", hint: "The number before two." },
+            { word: "had", hint: "The past tense of 'have'." },
+            { word: "by", hint: "Indicating proximity or the agent of an action." },
+            { word: "but", hint: "Introduces a contrasting idea." },
+            { word: "not", hint: "Used to make a statement negative." },
+            { word: "what", hint: "Asking for information about something." },
+            { word: "all", hint: "The whole quantity or extent." },
+            { word: "were", hint: "The past tense of the verb 'to be' (plural)." },
+            { word: "we", hint: "Refers to oneself and others." },
+            { word: "when", hint: "Asking about the time of an event." },
+            { word: "your", hint: "Belonging to the person being addressed." },
+            { word: "can", hint: "Expresses ability or possibility." },
+            { word: "said", hint: "The past tense of 'say'." },
+            { word: "there", hint: "Referring to a place." },
+            { word: "use", hint: "To employ something for a purpose." },
+            { word: "go", hint: "To move from one place to another." },
+            { word: "look", hint: "To direct one's gaze toward something." },
+            { word: "make", hint: "To create or form something." },
+            { word: "like", hint: "To find something pleasant or attractive." },
+            { word: "out", hint: "Moving away from the interior." },
+            { word: "find", hint: "To discover something." },
+            { word: "will", hint: "Expresses the future tense." },
+            { word: "just", hint: "Exactly, or only recently." },
+            { word: "give", hint: "To hand over something." },
+            { word: "new", hint: "Not existing before." },
+            { word: "because", hint: "Giving a reason for something." },
+            { word: "around", hint: "Located or situated on every side." },
+            { word: "know", hint: "To be aware of a fact or situation." },
+            { word: "don't", hint: "Short for 'do not'." },
+            { word: "would", hint: "Expresses a condition or desire." },
+            { word: "write", hint: "To form letters or words on a surface." },
+            { word: "long", hint: "Having a great distance from end to end." },
+            { word: "down", hint: "Toward a lower place." },
+            { word: "see", hint: "To perceive with the eyes." },
+            { word: "me", hint: "Referring to oneself as the object of a verb." },
+            { word: "time", hint: "The indefinite continued progress of existence." },
+            { word: "no", hint: "The opposite of yes." },
+            { word: "word", hint: "A single unit of language with meaning." }
+        ];
+
+        // Level 2 words (Expanded Common, 4-8 letters, with pre-defined hints)
+        const LEVEL_2_WORDS = [
+            { word: "absence", hint: "The state of being away." },
+            { word: "accept", hint: "To agree to receive or undertake." },
+            { word: "across", hint: "From one side to the other." },
+            { word: "address", hint: "The location of a building or person." },
+            { word: "advice", hint: "Guidance or recommendations." },
+            { word: "allot", hint: "To give or apportion (something) to someone." },
+            { word: "already", hint: "Before the present time." },
+            { word: "amateur", hint: "A person who engages in a pursuit as a pastime." },
+            { word: "among", hint: "In the company of or surrounded by." },
+            { word: "analyze", hint: "To examine methodically and in detail." },
+            { word: "annual", hint: "Occurring once every year." },
+            { word: "apology", hint: "An expression of regret for an offense." },
+            { word: "apparent", hint: "Clearly visible or understood; obvious." },
+            { word: "argument", hint: "A reason or set of reasons given to persuade." },
+            { word: "athletic", hint: "Relating to sports or physical exertion." },
+            { word: "awkward", hint: "Difficult to use or handle; clumsy." },
+            { word: "balloon", hint: "A small inflatable rubber sack." },
+            { word: "barbarous", hint: "Uncivilized or savagely cruel." },
+            { word: "basic", hint: "Forming an essential foundation." },
+            { word: "begging", hint: "Asking for something earnestly." },
+            { word: "belief", hint: "An acceptance that something exists or is true." },
+            { word: "benefit", hint: "An advantage or profit gained." },
+            { word: "bicycle", hint: "A two-wheeled vehicle." },
+            { word: "bizarre", hint: "Extremely strange or unusual." },
+            { word: "breathe", hint: "To take air into the lungs and then expel it." },
+            { word: "bruise", hint: "An injury appearing as a discolored mark." },
+            { word: "business", hint: "A person's regular occupation or trade." },
+            { word: "calendar", hint: "A chart showing the days, weeks, and months." },
+            { word: "ceiling", hint: "The upper interior surface of a room." },
+            { word: "cemetery", hint: "A large burial ground." },
+            { word: "changeable", hint: "Liable to change or easily changed." },
+            { word: "chief", hint: "A leader or ruler of a people or clan." },
+            { word: "choose", hint: "To select from a number of alternatives." },
+            { word: "
