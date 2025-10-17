@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intonation Matcher Game - Mobile Ready</title>
+    <title>Intonation Matcher Game - Final</title>
     
     <style>
         body {
@@ -11,31 +11,30 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 15px; /* Reduced top padding for mobile space */
+            padding-top: 15px;
             background-color: #f4f4f4;
             color: #333;
-            margin: 0; /* Important: Remove default body margin */
+            margin: 0;
             width: 100%;
         }
 
         h1 {
             color: #1e88e5;
-            font-size: 1.5em; /* Slightly smaller for mobile */
+            font-size: 1.5em;
             margin-top: 0;
         }
 
         .controls {
             background-color: #fff;
-            padding: 20px; /* Reduced padding */
-            border-radius: 0; /* Remove rounded corners for full width on mobile */
+            padding: 20px;
+            border-radius: 0;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
-            width: 100%; /* Take full width of the body */
-            box-sizing: border-box; /* Ensure padding doesn't push it over 100% */
-            margin-bottom: 10px; /* Reduced margin */
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
         }
         
-        /* Optional: Re-add max-width for non-mobile screens to prevent stretching */
         @media (min-width: 600px) {
             .controls {
                 max-width: 550px;
@@ -43,7 +42,6 @@
                 margin-bottom: 20px;
             }
         }
-
 
         .pitch-display {
             font-size: 1.2em;
@@ -102,17 +100,33 @@
 
         input[type="range"] {
             -webkit-appearance: none;
-            width: 95%; /* Increased width for easier touch targeting */
-            height: 12px; /* Increased height for easier touch targeting */
+            width: 95%;
+            height: 12px;
             background: #ddd;
             border-radius: 6px;
             margin: 20px 0;
             cursor: pointer;
-            
-            /* --- CRITICAL FIX FOR MOBILE FADER USABILITY --- */
             touch-action: none; 
-            /* Prevents the browser from interpreting horizontal swipe on the fader 
-               as a navigation gesture (like swiping back/forward). */
+        }
+
+        /* Style for the new incremental buttons */
+        .fader-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .fader-controls button {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            margin: 0 10px;
+            padding: 0;
+            line-height: 50px;
+            background-color: #1e88e5; /* Blue */
+            color: white;
+            border-radius: 50%;
         }
 
         #feedbackResult {
@@ -151,14 +165,13 @@
             border-bottom: 1px dotted #ccc;
             display: flex;
             justify-content: space-between;
-            font-size: 0.85em; /* Slightly smaller list text */
+            font-size: 0.85em;
         }
         #highScoresList li strong {
             color: #333;
             font-size: 1.0em;
         }
         #highScoresList li span {
-            /* Ensure date/time fits */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -173,7 +186,6 @@
             color: #e91e63;
         }
         
-        /* Final Results Screen Adjustments */
         #finalName {
             color: #1e88e5;
             font-size: 1.5em;
@@ -218,6 +230,12 @@
 
         <div class="note-control">
             <label for="userFader">Tune Your Note (Cents $\pm$ 50):</label>
+            
+            <div class="fader-controls">
+                <button id="decrementFader" aria-label="Lower Pitch by 1 Cent">-</button>
+                <button id="incrementFader" aria-label="Raise Pitch by 1 Cent">+</button>
+            </div>
+            
             <input type="range" id="userFader" min="-50" max="50" value="0" step="1">
             <br>
     
@@ -292,6 +310,9 @@
         const timerDisplay = document.getElementById('timerDisplay');
         const finalTimeDisplay = document.getElementById('finalTime');
         const finalNameDisplay = document.getElementById('finalName');
+        // New button DOM references
+        const decrementFaderButton = document.getElementById('decrementFader');
+        const incrementFaderButton = document.getElementById('incrementFader');
 
 
         // --- Utility Functions ---
@@ -554,12 +575,44 @@
             document.getElementById(`stop${type === 'reference' ? 'Reference' : 'UserNote'}`).disabled = true;
         }
 
+        /**
+         * Adjusts the fader value by a given step (usually +1 or -1) and updates the audio frequency.
+         * @param {number} step - The number of steps (cents) to change the fader by.
+         */
+        function adjustFader(step) {
+            const min = parseFloat(userFader.min);
+            const max = parseFloat(userFader.max);
+            let currentValue = parseFloat(userFader.value);
+            
+            // Calculate new value and clamp it within min/max bounds
+            let newValue = Math.min(Math.max(currentValue + step, min), max);
+            
+            userFader.value = newValue;
+
+            // Immediately update the audio frequency if the note is playing
+            if (window.userOscillator) {
+                window.userOscillator.frequency.setValueAtTime(getCombinedFrequency(), audioContext.currentTime);
+            }
+        }
+
+
         // --- Event Listeners ---
         document.getElementById('startReference').addEventListener('click', () => { startNote('reference'); });
         document.getElementById('stopReference').addEventListener('click', () => { stopNote('reference'); });
         document.getElementById('startUserNote').addEventListener('click', () => { startNote('user'); });
         document.getElementById('stopUserNote').addEventListener('click', () => { stopNote('user'); });
-        userFader.addEventListener('input', () => { if (window.userOscillator) { window.userOscillator.frequency.setValueAtTime(getCombinedFrequency(), audioContext.currentTime); } });
+        
+        // Fader/Slider event: update audio immediately when fader position changes
+        userFader.addEventListener('input', () => { 
+            if (window.userOscillator) { 
+                window.userOscillator.frequency.setValueAtTime(getCombinedFrequency(), audioContext.currentTime); 
+            } 
+        });
+
+        // New button events: adjust fader value by 1 cent
+        decrementFaderButton.addEventListener('click', () => adjustFader(-1));
+        incrementFaderButton.addEventListener('click', () => adjustFader(1));
+
         document.getElementById('checkMatch').addEventListener('click', checkMatch);
         document.getElementById('nextNote').addEventListener('click', startNewNote);
 
