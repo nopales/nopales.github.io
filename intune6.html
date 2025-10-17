@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intonation Matcher Game - Mobile Ready</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 15px; /* Reduced top padding for mobile space */
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0; /* Important: Remove default body margin */
+            width: 100%;
+        }
+
+        h1 {
+            color: #1e88e5;
+            font-size: 1.5em; /* Slightly smaller for mobile */
+            margin-top: 0;
+        }
+
+        .controls {
+            background-color: #fff;
+            padding: 20px; /* Reduced padding */
+            border-radius: 0; /* Remove rounded corners for full width on mobile */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%; /* Take full width of the body */
+            box-sizing: border-box; /* Ensure padding doesn't push it over 100% */
+            margin-bottom: 10px; /* Reduced margin */
+        }
+        
+        /* Optional: Re-add max-width for non-mobile screens to prevent stretching */
+        @media (min-width: 600px) {
+            .controls {
+                max-width: 550px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+            }
+        }
+
+
+        .pitch-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            transition: background-color 0.3s, transform 0.1s;
+            min-width: 80px;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .start-btn {
+            background-color: #4CAF50; 
+            color: white;
+        }
+        
+        .exit-btn {
+            background-color: #9e9e9e;
+            color: white;
+            margin-top: 15px;
+        }
+
+        #checkMatch {
+            background-color: #FFC107;
+            color: #333;
+            margin-top: 15px;
+            padding: 15px 30px;
+            font-size: 18px;
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background: #ccc;
+            margin: 20px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 95%; /* Increased width for easier touch targeting */
+            height: 12px; /* Increased height for easier touch targeting */
+            background: #ddd;
+            border-radius: 6px;
+            margin: 20px 0;
+            cursor: pointer;
+            
+            /* --- CRITICAL FIX FOR MOBILE FADER USABILITY --- */
+            touch-action: none; 
+            /* Prevents the browser from interpreting horizontal swipe on the fader 
+               as a navigation gesture (like swiping back/forward). */
+        }
+
+        #feedbackResult {
+            margin-top: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            min-height: 25px;
+        }
+        .correct { color: #4CAF50; }
+        .close { color: #FF9800; }
+        .way-off { color: #F44336; }
+        
+        /* Game specific UI */
+        #sessionControls {
+            border: 2px dashed #1e88e5;
+            border-radius: 10px;
+        }
+        #initialScoreboard {
+            text-align: left;
+            margin-top: 20px;
+        }
+        #initialScoreboard h3 {
+            color: #1e88e5;
+            border-bottom: 2px solid #1e88e5;
+            padding-bottom: 5px;
+        }
+        .score-section {
+            margin-bottom: 15px;
+        }
+        #highScoresList {
+            list-style: none;
+            padding: 0;
+        }
+        #highScoresList li {
+            padding: 5px 0;
+            border-bottom: 1px dotted #ccc;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em; /* Slightly smaller list text */
+        }
+        #highScoresList li strong {
+            color: #333;
+            font-size: 1.0em;
+        }
+        #highScoresList li span {
+            /* Ensure date/time fits */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 50%;
+            text-align: right;
+        }
+
+        #timerDisplay {
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #e91e63;
+        }
+        
+        /* Final Results Screen Adjustments */
+        #finalName {
+            color: #1e88e5;
+            font-size: 1.5em;
+            margin-bottom: 5px;
+            display: block;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Intonation Matcher Game 🎧🎯</h1>
+    
+    <div class="controls" id="sessionControls">
+        <label>Select Session Length to Start:</label>
+        <button onclick="startGame(5)">5 Notes</button>
+        <button onclick="startGame(10)">10 Notes</button>
+        
+        <div id="initialScoreboard">
+            </div>
+    </div>
+
+    <div class="controls" id="gameArea" style="display: none;">
+        <div id="timerDisplay">Time: 00:00</div>
+        <div id="scoreDisplay">
+            Note <span id="currentNoteNum">0</span> of <span id="totalNotes">0</span> | Score: <span id="correctAttempts">0</span>
+        </div>
+
+        <hr>
+
+        <div class="note-control">
+            <label for="referencePitchDisplay">Reference Pitch (Random):</label>
+            <span id="referencePitchDisplay" class="pitch-display">440.00</span> Hz
+            <br>
+    
+            <button id="startReference" class="start-btn">Start Reference</button>
+            <button id="stopReference" class="stop-btn" disabled>Stop Reference</button>
+        </div>
+
+        <hr>
+
+        <div class="note-control">
+            <label for="userFader">Tune Your Note (Cents $\pm$ 50):</label>
+            <input type="range" id="userFader" min="-50" max="50" value="0" step="1">
+            <br>
+    
+            <button id="startUserNote" class="start-btn">Start Your Note</button>
+            <button id="stopUserNote" class="stop-btn" disabled>Stop Your Note</button>
+        </div>
+        
+        <button id="checkMatch">Check Match</button>
+        <div id="feedbackResult"></div>
+
+        <button id="nextNote" class="start-btn hidden">Next Note &raquo;</button>
+        
+        <button onclick="exitSession()" class="exit-btn">Exit Session</button>
+    </div>
+    
+    <div class="hidden" id="finalResults">
+        <div class="controls">
+            <h2>Game Over!</h2>
+            <span id="finalName"></span>
+            <p>Final Score: <strong id="finalScore">0</strong> / <strong id="finalTotal">0</strong></p>
+            <p>Completion Time: <strong id="finalTime">00:00</strong></p>
+            <p id="currentTimeDate"></p>
+            
+            <hr>
+            <h3>Top 5 Scores (Session: <span id="topScoresTotal"></span> Notes)</h3>
+            <ul id="finalHighScoresList">
+                </ul>
+
+            <button onclick="resetGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Global Audio Context and Oscillators
+        let audioContext;
+        let referenceOscillator = null;
+        let userOscillator = null;
+
+        // --- GAME STATE VARIABLES ---
+        let totalNotesInSession = 0;
+        let currentNoteNumber = 0;
+        let correctOnFirstAttempt = 0;
+        let isFirstAttempt = true;
+        let startTime = 0;
+        let timerInterval = null;
+        let finalCompletionTime = 0;
+        let currentUserName = "Player";
+
+        // --- CONSTANTS ---
+        const WAVE_TYPE = 'sawtooth'; 
+        const A4_FREQ = 440; 
+        const CORRECT_DING_FREQ = 1000;
+        const ZERO_ERROR_TOLERANCE = 0.5;
+        const STORAGE_KEY = 'intonationMatchScores';
+        
+        // --- CHALLENGE STATE ---
+        let currentReferenceFreq = A4_FREQ;
+        let currentChallengeOffsetCents = 0;
+
+        // DOM Elements
+        const sessionControls = document.getElementById('sessionControls');
+        const gameArea = document.getElementById('gameArea');
+        const finalResultsDiv = document.getElementById('finalResults');
+        const currentTimeDateSpan = document.getElementById('currentTimeDate');
+        const initialScoreboard = document.getElementById('initialScoreboard');
+        const finalHighScoresList = document.getElementById('finalHighScoresList');
+        const topScoresTotalSpan = document.getElementById('topScoresTotal');
+        const userFader = document.getElementById('userFader');
+        const checkMatchButton = document.getElementById('checkMatch');
+        const feedbackResult = document.getElementById('feedbackResult');
+        const nextNoteButton = document.getElementById('nextNote');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const finalTimeDisplay = document.getElementById('finalTime');
+        const finalNameDisplay = document.getElementById('finalName');
+
+
+        // --- Utility Functions ---
+        function getCombinedFrequency() {
+            const visualFaderCents = parseFloat(userFader.value);
+            const totalCents = currentChallengeOffsetCents + visualFaderCents;
+            return currentReferenceFreq * Math.pow(2, totalCents / 1200);
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const seconds = String(totalSeconds % 60).padStart(2, '0');
+            return `${minutes}:${seconds}`;
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerDisplay.textContent = 'Time: 00:00';
+            
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                timerDisplay.textContent = `Time: ${formatTime(elapsed)}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            finalCompletionTime = Date.now() - startTime;
+        }
+
+        // --- High Score Logic ---
+
+        function loadScores() {
+            try {
+                const storedScores = localStorage.getItem(STORAGE_KEY);
+                return storedScores ? JSON.parse(storedScores) : [];
+            } catch (e) {
+                console.error("Error loading scores:", e);
+                return [];
+            }
+        }
+
+        function saveScore(name, score, total, timeMs) {
+            const allScores = loadScores();
+            const fullDateTime = new Date().toLocaleString(); 
+
+            const newScore = {
+                name: name || 'Player',
+                score: score,
+                total: total,
+                timeMs: timeMs, 
+                timeFormatted: formatTime(timeMs), 
+                date: fullDateTime 
+            };
+            
+            let sessionScores = allScores.filter(s => s.total === total);
+            let otherScores = allScores.filter(s => s.total !== total);
+
+            sessionScores.push(newScore);
+
+            sessionScores.sort((a, b) => {
+                if (b.score !== a.score) { return b.score - a.score; }
+                if (a.timeMs !== b.timeMs) { return a.timeMs - b.timeMs; }
+                return new Date(a.date) - new Date(b.date);
+            });
+
+            sessionScores = sessionScores.slice(0, 5);
+            
+            const finalScores = [...otherScores, ...sessionScores];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(finalScores));
+        }
+
+        function renderScoreboardHTML(totalFilter) {
+            const allScores = loadScores();
+            const relevantScores = allScores
+                .filter(s => s.total === totalFilter)
+                .sort((a, b) => {
+                    if (b.score !== a.score) { return b.score - a.score; }
+                    if (a.timeMs !== b.timeMs) { return a.timeMs - b.timeMs; }
+                    return new Date(a.date) - new Date(b.date);
+                });
+
+            if (relevantScores.length === 0) {
+                return '<li>No scores recorded yet.</li>';
+            }
+
+            return relevantScores.slice(0, 5).map((s, index) => {
+                const datePart = s.date.split(',')[0];
+                const timePart = s.date.split(',')[1].trim();
+
+                return `
+                    <li>
+                        #${index + 1}: 
+                        <strong>${s.name} - ${s.score} / ${s.total}</strong>
+                        <span>Time: ${s.timeFormatted} | ${datePart} ${timePart}</span>
+                    </li>
+                `;
+            }).join('');
+        }
+        
+        function displayInitialScoreboard() {
+            initialScoreboard.innerHTML = `
+                <hr>
+                <div class="score-section">
+                    <h3>Top 5 Scores (5 Notes)</h3>
+                    <ul id="highScoresList">
+                        ${renderScoreboardHTML(5)}
+                    </ul>
+                </div>
+                <div class="score-section">
+                    <h3>Top 5 Scores (10 Notes)</h3>
+                    <ul id="highScoresList">
+                        ${renderScoreboardHTML(10)}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // --- Game Session Control ---
+
+        function startGame(numNotes) {
+            document.getElementById('totalNotes').textContent = numNotes;
+            document.getElementById('correctAttempts').textContent = 0;
+            totalNotesInSession = numNotes;
+            currentNoteNumber = 0;
+            correctOnFirstAttempt = 0;
+            
+            sessionControls.classList.add('hidden');
+            finalResultsDiv.classList.add('hidden');
+            gameArea.style.display = 'block';
+            
+            startTimer();
+            startNewNote();
+        }
+
+        async function endGame() {
+            stopNote('reference');
+            stopNote('user');
+            stopTimer();
+            
+            let userName = prompt(`Congratulations! Your time was ${formatTime(finalCompletionTime)}. Please enter your first name for the scoreboard:`, "Player");
+            currentUserName = userName || "Player";
+
+            saveScore(currentUserName, correctOnFirstAttempt, totalNotesInSession, finalCompletionTime);
+
+            finalNameDisplay.textContent = currentUserName;
+            document.getElementById('finalScore').textContent = correctOnFirstAttempt;
+            document.getElementById('finalTotal').textContent = totalNotesInSession;
+            finalTimeDisplay.textContent = formatTime(finalCompletionTime);
+            currentTimeDateSpan.textContent = `Attempt Completed: ${new Date().toLocaleString()}`;
+            
+            topScoresTotalSpan.textContent = totalNotesInSession;
+            finalHighScoresList.innerHTML = renderScoreboardHTML(totalNotesInSession);
+            
+            gameArea.style.display = 'none';
+            finalResultsDiv.classList.remove('hidden');
+            
+            displayInitialScoreboard();
+        }
+        
+        function exitSession() {
+            if (confirm("Are you sure you want to exit the current session? Your score will not be recorded.")) {
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            totalNotesInSession = 0;
+            currentNoteNumber = 0;
+            correctOnFirstAttempt = 0;
+            finalCompletionTime = 0;
+            
+            stopNote('reference');
+            stopNote('user');
+            stopTimer(); 
+
+            finalResultsDiv.classList.add('hidden');
+            gameArea.style.display = 'none';
+            sessionControls.classList.remove('hidden');
+        }
+
+        // --- Note and Sound Logic ---
+        function initAudioContext() {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        function calculateNoteFrequency(semitones) { return A4_FREQ * Math.pow(2, semitones / 12); }
+        function selectRandomReferencePitch() {
+            const minSemitones = -12; const maxSemitones = 12;  
+            const randomSemitones = Math.floor(Math.random() * (maxSemitones - minSemitones + 1)) + minSemitones;
+            return calculateNoteFrequency(randomSemitones);
+        }
+
+        function startNewNote() {
+            if (currentNoteNumber >= totalNotesInSession) return endGame();
+            document.getElementById('currentNoteNum').textContent = ++currentNoteNumber;
+            isFirstAttempt = true;
+            feedbackResult.textContent = '';
+            feedbackResult.className = '';
+            checkMatchButton.disabled = false;
+            nextNoteButton.classList.add('hidden');
+            stopNote('reference'); stopNote('user');
+            currentReferenceFreq = selectRandomReferencePitch();
+            document.getElementById('referencePitchDisplay').textContent = currentReferenceFreq.toFixed(2);
+            const randomOffset = Math.floor(Math.random() * (20 - 10 + 1)) + 10;
+            const sign = Math.random() < 0.5 ? 1 : -1;
+            currentChallengeOffsetCents = randomOffset * sign;
+            userFader.value = 0;
+        }
+
+        function checkMatch() {
+            const errorInCents = currentChallengeOffsetCents + parseFloat(userFader.value);
+            const absoluteError = Math.abs(errorInCents);
+            
+            if (absoluteError <= ZERO_ERROR_TOLERANCE) { 
+                feedbackResult.textContent = `✅ PERFECT MATCH! Error: ${absoluteError.toFixed(2)} cents.`;
+                feedbackResult.className = 'correct';
+                if (isFirstAttempt) {
+                    document.getElementById('correctAttempts').textContent = ++correctOnFirstAttempt;
+                }
+                initAudioContext();
+                const o = audioContext.createOscillator(); const g = audioContext.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(CORRECT_DING_FREQ, audioContext.currentTime); g.gain.setValueAtTime(0, audioContext.currentTime); g.gain.linearRampToValueAtTime(0.7, audioContext.currentTime + 0.01); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2); o.connect(g).connect(audioContext.destination); o.start(audioContext.currentTime); o.stop(audioContext.currentTime + 0.2);
+                stopNote('reference'); stopNote('user');
+                checkMatchButton.disabled = true;
+                nextNoteButton.classList.remove('hidden');
+            } else { 
+                isFirstAttempt = false;
+                let message = `You are ${absoluteError.toFixed(1)} cents off.`;
+                message += (errorInCents > 0.5) ? ` (Still too sharp)` : ` (Still too flat)`;
+                feedbackResult.textContent = (absoluteError <= 5.0) ? `⚠️ Close, but not perfect. ${message}` : `❌ Nope! ${message}`;
+                feedbackResult.className = (absoluteError <= 5.0) ? 'close' : 'way-off';
+            }
+        }
+        
+        function startNote(type) {
+            initAudioContext();
+            stopNote(type); 
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            let startFreq = (type === 'reference') ? currentReferenceFreq : getCombinedFrequency();
+            oscillator.type = WAVE_TYPE; gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(startFreq, audioContext.currentTime);
+            oscillator.connect(gainNode).connect(audioContext.destination); oscillator.start();
+            if (type === 'reference') { window.referenceOscillator = oscillator; } else { window.userOscillator = oscillator; }
+            document.getElementById(`start${type === 'reference' ? 'Reference' : 'UserNote'}`).disabled = true;
+            document.getElementById(`stop${type === 'reference' ? 'Reference' : 'UserNote'}`).disabled = false;
+        }
+        
+        function stopNote(type) {
+            const osc = (type === 'reference') ? window.referenceOscillator : window.userOscillator;
+            if (osc) { osc.stop(); }
+            window[`${type === 'reference' ? 'reference' : 'user'}Oscillator`] = null; 
+            document.getElementById(`start${type === 'reference' ? 'Reference' : 'UserNote'}`).disabled = false;
+            document.getElementById(`stop${type === 'reference' ? 'Reference' : 'UserNote'}`).disabled = true;
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('startReference').addEventListener('click', () => { startNote('reference'); });
+        document.getElementById('stopReference').addEventListener('click', () => { stopNote('reference'); });
+        document.getElementById('startUserNote').addEventListener('click', () => { startNote('user'); });
+        document.getElementById('stopUserNote').addEventListener('click', () => { stopNote('user'); });
+        userFader.addEventListener('input', () => { if (window.userOscillator) { window.userOscillator.frequency.setValueAtTime(getCombinedFrequency(), audioContext.currentTime); } });
+        document.getElementById('checkMatch').addEventListener('click', checkMatch);
+        document.getElementById('nextNote').addEventListener('click', startNewNote);
+
+        document.addEventListener('DOMContentLoaded', displayInitialScoreboard);
+    </script>
+</body>
+</html>
