@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Body Fat Percentage Calculator</title>
+  <style>
+    /* CSS styles for the calculator */
+    input[type="number"] {
+      width: 100%;
+      padding: 10px;
+    }
+    button {
+      padding: 10px;
+      margin: 5px;
+    }
+    #result {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .units-panel input,
+    .units-panel select {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 100%;
+    }
+    .units-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .units-panel {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .units-panel h2 {
+      margin: 0 0 8px 0;
+      font-size: 1.1em;
+    }
+    .height-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Body Fat Percentage Calculator</h1>
+  <form id="calculator">
+    <label for="sex">Sex:</label>
+    <select id="sex" name="sex" required>
+      <option value="" selected disabled>Select</option>
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select>
+    <br>
+    <div class="units-columns">
+      <div id="imperialGroup" class="units-panel">
+        <h2>Imperial</h2>
+      <label for="weight">Weight (lb):</label>
+      <input type="number" id="weight" name="weight" step="0.1" required>
+      <br>
+      <label for="idealWeightLb">Ideal bodyweight (lb):</label>
+      <input type="number" id="idealWeightLb" name="idealWeightLb" step="0.1" required>
+      <br>
+      <label for="heightFeet">Height:</label>
+      <div class="height-pair">
+        <input type="number" id="heightFeet" name="heightFeet" placeholder="Feet" required>
+        <input type="number" id="heightInches" name="heightInches" placeholder="Inches" min="0" max="11.5" step="0.1">
+      </div>
+      <br>
+      <label for="neck">Neck (in):</label>
+      <input type="number" id="neck" name="neck" min="5" max="30" step="0.1" required>
+      <br>
+      <label for="waist">Waist (in):</label>
+      <input type="number" id="waist" name="waist" step="0.1" required>
+      <br>
+      <div id="hipRow" style="display:none;">
+        <label for="hip">Hip (in):</label>
+        <input type="number" id="hip" name="hip" min="20" max="80" step="0.1">
+        <br>
+      </div>
+      </div>
+
+      <div id="metricGroup" class="units-panel">
+        <h2>Metric</h2>
+      <label for="weightKg">Weight (kg):</label>
+      <input type="number" id="weightKg" name="weightKg" step="0.1">
+      <br>
+      <label for="idealWeightKg">Ideal bodyweight (kg):</label>
+      <input type="number" id="idealWeightKg" name="idealWeightKg" step="0.1">
+      <br>
+      <label for="heightM">Height (m):</label>
+      <input type="number" id="heightM" name="heightM" step="0.01">
+      <br>
+      <label for="neckCm">Neck (cm):</label>
+      <input type="number" id="neckCm" name="neckCm" step="0.1">
+      <br>
+      <label for="waistCm">Waist (cm):</label>
+      <input type="number" id="waistCm" name="waistCm" step="0.1">
+      <br>
+      <div id="hipRowMetric" style="display:none;">
+        <label for="hipCm">Hip (cm):</label>
+        <input type="number" id="hipCm" name="hipCm" step="0.1">
+        <br>
+      </div>
+      </div>
+    </div>
+    <button type="button" id="calculate">Calculate</button>
+  </form>
+  <div id="result"></div>
+
+  <script>
+    // JavaScript code to handle the calculator
+    const calculator = document.getElementById('calculator');
+    const weightInput = document.getElementById('weight');
+    const heightFeetInput = document.getElementById('heightFeet');
+    const heightInchesInput = document.getElementById('heightInches');
+    const sexInput = document.getElementById('sex');
+    const neckInput = document.getElementById('neck');
+    const waistInput = document.getElementById('waist');
+    const hipInput = document.getElementById('hip');
+    const hipRow = document.getElementById('hipRow');
+    const weightKgInput = document.getElementById('weightKg');
+    const idealWeightLbInput = document.getElementById('idealWeightLb');
+    const idealWeightKgInput = document.getElementById('idealWeightKg');
+    const heightMInput = document.getElementById('heightM');
+    const neckCmInput = document.getElementById('neckCm');
+    const waistCmInput = document.getElementById('waistCm');
+    const hipCmInput = document.getElementById('hipCm');
+    const hipRowMetric = document.getElementById('hipRowMetric');
+    const calculateButton = document.getElementById('calculate');
+    const result = document.getElementById('result');
+
+    sexInput.addEventListener('change', () => {
+      if (sexInput.value === 'female') {
+        hipRow.style.display = 'block';
+        hipRowMetric.style.display = 'block';
+      } else {
+        hipRow.style.display = 'none';
+        hipRowMetric.style.display = 'none';
+      }
+    });
+
+    // Both forms are visible; syncing keeps them aligned.
+
+    let syncing = false;
+    function toFixed1(n) { return Math.round(n * 10) / 10; }
+    function toFixed2(n) { return Math.round(n * 100) / 100; }
+    function syncImperialToMetric() {
+      if (syncing) return; syncing = true;
+      const feet = parseFloat(heightFeetInput.value) || 0;
+      const inches = Math.min(parseFloat(heightInchesInput.value || '0') || 0, 11.5);
+      const totalIn = feet * 12 + inches;
+      if (totalIn > 0) heightMInput.value = toFixed2(totalIn * 0.0254);
+      const lb = parseFloat(weightInput.value);
+      if (!isNaN(lb)) weightKgInput.value = toFixed1(lb * 0.45359237);
+      const idealLb = parseFloat(idealWeightLbInput.value);
+      if (!isNaN(idealLb)) idealWeightKgInput.value = toFixed1(idealLb * 0.45359237);
+      const neckIn = parseFloat(neckInput.value);
+      if (!isNaN(neckIn)) neckCmInput.value = toFixed1(neckIn * 2.54);
+      const waistIn = parseFloat(waistInput.value);
+      if (!isNaN(waistIn)) waistCmInput.value = toFixed1(waistIn * 2.54);
+      const hipIn = parseFloat(hipInput.value);
+      if (!isNaN(hipIn)) hipCmInput.value = toFixed1(hipIn * 2.54);
+      syncing = false;
+    }
+    function syncMetricToImperial() {
+      if (syncing) return; syncing = true;
+      const m = parseFloat(heightMInput.value);
+      if (!isNaN(m) && m > 0) {
+        const totalIn = m / 0.0254;
+        const feet = Math.floor(totalIn / 12);
+        let inches = toFixed1(totalIn - feet * 12);
+        if (inches > 11.5) { inches = 11.5; }
+        heightFeetInput.value = feet;
+        heightInchesInput.value = inches;
+      }
+      const kg = parseFloat(weightKgInput.value);
+      if (!isNaN(kg)) weightInput.value = toFixed1(kg / 0.45359237);
+      const idealKg = parseFloat(idealWeightKgInput.value);
+      if (!isNaN(idealKg)) idealWeightLbInput.value = toFixed1(idealKg / 0.45359237);
+      const neckCm = parseFloat(neckCmInput.value);
+      if (!isNaN(neckCm)) neckInput.value = toFixed1(neckCm / 2.54);
+      const waistCm = parseFloat(waistCmInput.value);
+      if (!isNaN(waistCm)) waistInput.value = toFixed1(waistCm / 2.54);
+      const hipCm = parseFloat(hipCmInput.value);
+      if (!isNaN(hipCm)) hipInput.value = toFixed1(hipCm / 2.54);
+      syncing = false;
+    }
+
+    // Wire up sync events
+    [weightInput, idealWeightLbInput, heightFeetInput, heightInchesInput, neckInput, waistInput, hipInput].forEach(el => {
+      if (el) el.addEventListener('input', syncImperialToMetric);
+    });
+    [weightKgInput, idealWeightKgInput, heightMInput, neckCmInput, waistCmInput, hipCmInput].forEach(el => {
+      if (el) el.addEventListener('input', syncMetricToImperial);
+    });
+
+    calculateButton.addEventListener('click', () => {
+      const feet = parseFloat(heightFeetInput.value);
+      const rawInches = parseFloat(heightInchesInput.value || '0');
+      const inches = isNaN(rawInches) ? 0 : Math.min(rawInches, 11.5);
+      const sexVal = sexInput.value;
+      const neck = parseFloat(neckInput.value);
+      const waist = parseFloat(waistInput.value);
+      const hip = hipInput && hipInput.value !== '' ? parseFloat(hipInput.value) : NaN;
+      const weightLbs = parseFloat(weightInput.value);
+      const idealWeightLb = parseFloat(idealWeightLbInput.value);
+
+      if (isNaN(feet) || !sexVal || isNaN(neck) || isNaN(waist)) {
+        result.textContent = 'Please enter height, sex, neck, and waist.';
+        return;
+      }
+
+      const heightIn = (feet * 12) + inches;
+      if (heightIn <= 0) {
+        result.textContent = 'Height must be greater than zero.';
+        return;
+      }
+
+      // US Navy method requires positive log arguments
+      let bodyFatPercentage;
+      if (sexVal === 'male') {
+        if (waist <= neck) {
+          result.textContent = 'For males, waist must be greater than neck.';
+          return;
+        }
+        bodyFatPercentage = 86.010 * Math.log10(waist - neck) - 70.041 * Math.log10(heightIn) + 36.76;
+      } else if (sexVal === 'female') {
+        if (isNaN(hip)) {
+          result.textContent = 'Please enter hip measurement for females.';
+          return;
+        }
+        if (waist + hip <= neck) {
+          result.textContent = 'For females, waist + hip must be greater than neck.';
+          return;
+        }
+        bodyFatPercentage = 163.205 * Math.log10(waist + hip - neck) - 97.684 * Math.log10(heightIn) - 78.387;
+      } else {
+        result.textContent = 'Please select sex.';
+        return;
+      }
+
+      if (isNaN(weightLbs) || weightLbs <= 0) {
+        result.textContent = 'Please enter a valid weight for BMI adjustment.';
+        return;
+      }
+      if (isNaN(idealWeightLb) || idealWeightLb <= 0) {
+        result.textContent = 'Please enter a valid ideal bodyweight to get protein recommendation.';
+        return;
+      }
+
+      const bmi = 703 * (weightLbs / (heightIn * heightIn));
+      const hybrid = bodyFatPercentage + 0.25 * (bmi - 25);
+      const idealKg = idealWeightLb * 0.45359237;
+      const proteinGrams = 2 * idealKg;
+      result.innerHTML = `Body Fat Percentage (Hybrid): ${hybrid.toFixed(2)}% (Navy: ${bodyFatPercentage.toFixed(2)}%, BMI: ${bmi.toFixed(1)})<br>Protein (2g/kg of ideal weight): ${proteinGrams.toFixed(0)} g/day`;
+    });
+  </script>
+</body>
+</html>
