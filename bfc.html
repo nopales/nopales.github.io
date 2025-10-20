@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Body Fat Percentage Calculator</title>
   <style>
     /* CSS styles for the calculator */
@@ -42,6 +43,11 @@
       grid-template-columns: 1fr 1fr;
       gap: 8px;
       width: 100%;
+    }
+    @media (max-width: 720px) {
+      .units-columns {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
