@@ -209,8 +209,16 @@
       const weightLbs = parseFloat(weightInput.value);
       const idealWeightLb = parseFloat(idealWeightLbInput.value);
 
-      if (isNaN(feet) || !sexVal || isNaN(neck) || isNaN(waist)) {
-        result.textContent = 'Please enter height, sex, neck, and waist.';
+      const missing = [];
+      if (!sexVal) missing.push('Sex');
+      if (isNaN(feet) || feet <= 0) missing.push('Height (feet)');
+      if (isNaN(neck) || neck <= 0) missing.push('Neck');
+      if (isNaN(waist) || waist <= 0) missing.push('Waist');
+      if (sexVal === 'female' && (isNaN(hip) || hip <= 0)) missing.push('Hip');
+      if (isNaN(weightLbs) || weightLbs <= 0) missing.push('Weight');
+      if (isNaN(idealWeightLb) || idealWeightLb <= 0) missing.push('Ideal bodyweight');
+      if (missing.length > 0) {
+        result.textContent = `Please provide: ${missing.join(', ')}`;
         return;
       }
 
@@ -243,14 +251,7 @@
         return;
       }
 
-      if (isNaN(weightLbs) || weightLbs <= 0) {
-        result.textContent = 'Please enter a valid weight for BMI adjustment.';
-        return;
-      }
-      if (isNaN(idealWeightLb) || idealWeightLb <= 0) {
-        result.textContent = 'Please enter a valid ideal bodyweight to get protein recommendation.';
-        return;
-      }
+      // weight and idealWeight already validated above
 
       const bmi = 703 * (weightLbs / (heightIn * heightIn));
       const hybrid = bodyFatPercentage + 0.25 * (bmi - 25);
