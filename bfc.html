@@ -263,7 +263,11 @@
       const hybrid = bodyFatPercentage + 0.25 * (bmi - 25);
       const idealKg = idealWeightLb * 0.45359237;
       const proteinGrams = 2 * idealKg;
-      result.innerHTML = `Body Fat Percentage (Hybrid): ${hybrid.toFixed(2)}% (Navy: ${bodyFatPercentage.toFixed(2)}%, BMI: ${bmi.toFixed(1)})<br>Protein (2g/kg of ideal weight): ${proteinGrams.toFixed(0)} g/day`;
+      const minProtein = 1.2 * idealKg;
+      const modProtein = 1.6 * idealKg;
+      result.innerHTML = `Body Fat Percentage (Hybrid): ${hybrid.toFixed(2)}% (Navy: ${bodyFatPercentage.toFixed(2)}%, BMI: ${bmi.toFixed(1)})
+      <br>Minimum Protein (1.2g/kg): ${minProtein.toFixed(0)} g/day
+      <br>Moderate Protein (1.6g/kg): ${modProtein.toFixed(0)} g/day<br>Recommended Protein (2g/kg of ideal weight): ${proteinGrams.toFixed(0)} g/day`;
     });
   </script>
 </body>
